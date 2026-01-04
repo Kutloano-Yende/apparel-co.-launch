@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "signup";
 
@@ -10,6 +11,7 @@ const AccountPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -27,17 +29,70 @@ const AccountPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      if (mode === "signup") {
+        // Sign up new user
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+            },
+          },
+        });
 
-    toast({
-      title: mode === "login" ? "Welcome back!" : "Account created!",
-      description: mode === "login" 
-        ? "You have been logged in successfully." 
-        : "Please check your email to verify your account.",
-    });
+        if (error) throw error;
 
-    setIsLoading(false);
+        // Save customer info to customers table
+        if (data.user) {
+          await supabase.from("customers").upsert({
+            email: formData.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+          });
+        }
+
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account.",
+        });
+
+        // Reset form
+        setFormData({
+          email: "",
+          password: "",
+          firstName: "",
+          lastName: "",
+        });
+        setMode("login");
+      } else {
+        // Sign in existing user
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Welcome back!",
+          description: "You have been logged in successfully.",
+        });
+
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      toast({
+        title: mode === "login" ? "Login failed" : "Signup failed",
+        description: error instanceof Error ? error.message : "An error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -162,12 +217,6 @@ const AccountPage = () => {
           </button>
         </div>
 
-        {/* Demo Notice */}
-        <div className="mt-8 p-4 bg-secondary text-center">
-          <p className="text-sm text-muted-foreground">
-            This is a demo. No real authentication will occur.
-          </p>
-        </div>
       </div>
     </main>
   );

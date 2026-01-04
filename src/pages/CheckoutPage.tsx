@@ -1,15 +1,164 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock, CreditCard } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/products";
 import { useToast } from "@/hooks/use-toast";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { getStripe } from "@/lib/stripe";
+import { supabase } from "@/lib/supabase";
+import { createPaymentIntent } from "@/lib/api";
+
+// Payment Form Component (wrapped in Stripe Elements)
+const PaymentForm = ({
+  formData,
+  finalTotal,
+  items,
+  totalPrice,
+  shippingCost,
+  onSuccess,
+  clientSecret,
+}: {
+  formData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    address: string;
+    apartment: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    phone: string;
+  };
+  finalTotal: number;
+  items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
+  totalPrice: number;
+  shippingCost: number;
+  onSuccess: () => void;
+  clientSecret: string;
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements || !clientSecret) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Confirm payment with Stripe
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success`,
+        },
+        redirect: "if_required",
+      });
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+
+      if (paymentIntent?.status === "succeeded") {
+        // Save order to Supabase
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .insert({
+            email: formData.email,
+            total_amount: finalTotal,
+            shipping_cost: shippingCost,
+            status: "processing",
+            shipping_address: {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              address: formData.address,
+              apartment: formData.apartment || undefined,
+              city: formData.city,
+              province: formData.province,
+              postalCode: formData.postalCode,
+              phone: formData.phone,
+            },
+            stripe_payment_intent_id: paymentIntent.id,
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        // Save order items
+        const orderItems = items.map((item) => ({
+          order_id: order.id,
+          product_id: item.product.id,
+          product_name: item.product.name,
+          product_image: item.product.image,
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity,
+          price: item.product.price,
+        }));
+
+        const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+
+        if (itemsError) throw itemsError;
+
+        // Save or update customer
+        await supabase.from("customers").upsert({
+          email: formData.email,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+        });
+
+        toast({
+          title: "Order placed successfully!",
+          description: "Thank you for your purchase. You'll receive a confirmation email shortly.",
+        });
+
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "An error occurred during payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="border border-border p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <CreditCard size={18} className="text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Secure payment powered by Stripe</span>
+        </div>
+        <PaymentElement />
+      </div>
+      <button
+        type="submit"
+        disabled={isProcessing || !stripe}
+        className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isProcessing ? "Processing..." : `Pay ${formatPrice(finalTotal)}`}
+      </button>
+    </form>
+  );
+};
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -28,20 +177,8 @@ const CheckoutPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-
-    // Simulate order processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    toast({
-      title: "Order placed successfully!",
-      description: "Thank you for your purchase. You'll receive a confirmation email shortly.",
-    });
-
+  const handleOrderSuccess = () => {
     clearCart();
-    setIsProcessing(false);
     navigate("/");
   };
 
@@ -78,7 +215,7 @@ const CheckoutPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Checkout Form */}
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-8">
             {/* Contact */}
             <div>
               <h2 className="font-display text-lg tracking-wider uppercase mb-4">Contact</h2>
@@ -183,27 +320,15 @@ const CheckoutPage = () => {
             </div>
 
             {/* Payment */}
-            <div>
-              <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
-              <div className="border border-border p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lock size={18} className="text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Secure payment</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This is a demo store. No real payment will be processed.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? "Processing..." : `Pay ${formatPrice(finalTotal)}`}
-            </button>
-          </form>
+            <PaymentSection
+              formData={formData}
+              finalTotal={finalTotal}
+              items={items}
+              totalPrice={totalPrice}
+              shippingCost={shippingCost}
+              onSuccess={handleOrderSuccess}
+            />
+          </div>
 
           {/* Order Summary */}
           <div className="lg:pl-12 lg:border-l border-border">
@@ -263,6 +388,127 @@ const CheckoutPage = () => {
         </div>
       </div>
     </main>
+  );
+};
+
+// Payment Section Component - Handles payment intent creation and Stripe Elements setup
+const PaymentSection = ({
+  formData,
+  finalTotal,
+  items,
+  totalPrice,
+  shippingCost,
+  onSuccess,
+}: {
+  formData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    address: string;
+    apartment: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    phone: string;
+  };
+  finalTotal: number;
+  items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
+  totalPrice: number;
+  shippingCost: number;
+  onSuccess: () => void;
+}) => {
+  const { toast } = useToast();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+
+  useEffect(() => {
+    const createIntent = async () => {
+      if (!formData.email || finalTotal <= 0) return;
+
+      setIsLoadingPayment(true);
+      try {
+        const response = await createPaymentIntent({
+          amount: finalTotal,
+          currency: "zar",
+          metadata: {
+            email: formData.email,
+          },
+        });
+        setClientSecret(response.clientSecret);
+      } catch (error) {
+        console.error("Error creating payment intent:", error);
+        // Don't show error toast immediately - it might be because backend isn't set up yet
+        // The payment section will show a message instead
+      } finally {
+        setIsLoadingPayment(false);
+      }
+    };
+
+    createIntent();
+  }, [formData.email, finalTotal]);
+
+  if (isLoadingPayment) {
+    return (
+      <div>
+        <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
+        <div className="border border-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Lock size={18} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Initializing secure payment...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!clientSecret) {
+    return (
+      <div>
+        <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
+        <div className="border border-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Lock size={18} className="text-muted-foreground" />
+            <span className="text-sm font-medium">Payment Setup Required</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">
+            To enable payment processing, please:
+          </p>
+          <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mb-4">
+            <li>Set up your backend API endpoint</li>
+            <li>Configure Stripe environment variables</li>
+            <li>Ensure the payment intent API is running</li>
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            See SETUP.md for detailed instructions.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
+      <Elements
+        stripe={getStripe()}
+        options={{
+          clientSecret,
+          appearance: {
+            theme: "stripe",
+          },
+        }}
+      >
+        <PaymentForm
+          formData={formData}
+          finalTotal={finalTotal}
+          items={items}
+          totalPrice={totalPrice}
+          shippingCost={shippingCost}
+          onSuccess={onSuccess}
+          clientSecret={clientSecret}
+        />
+      </Elements>
+    </div>
   );
 };
 
