@@ -116,7 +116,7 @@
   }
 
   .product-card {
-    @apply bg-card transition-all duration-500 group cursor-pointer;
+    @apply bg-card transition-all duration-500 cursor-pointer;
   }
 
   .product-card:hover {
