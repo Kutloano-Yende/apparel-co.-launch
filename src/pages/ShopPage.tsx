@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 import { products, getProductsByCategory } from "@/lib/products";
+import FadeInView from "@/components/animations/FadeInView";
 
 const categories = [
   { value: "all", label: "All Products" },
@@ -53,7 +55,7 @@ const ShopPage = () => {
     <main className="pt-24 md:pt-28 pb-16 md:pb-24">
       <div className="container-brand">
         {/* Header */}
-        <div className="mb-12">
+        <FadeInView className="mb-12">
           <h1 className="section-heading mb-4">
             {categoryParam === "all"
               ? "All Products"
@@ -62,55 +64,65 @@ const ShopPage = () => {
           <p className="text-muted-foreground">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
           </p>
-        </div>
+        </FadeInView>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row justify-between gap-6 mb-10 pb-6 border-b border-border">
-          {/* Categories */}
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <button
-                key={category.value}
-                onClick={() => handleCategoryChange(category.value)}
-                className={`px-4 py-2 font-display text-xs tracking-widest uppercase transition-colors ${
-                  categoryParam === category.value
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-foreground hover:bg-foreground hover:text-background"
-                }`}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sort */}
-          <div className="flex items-center gap-3">
-            <label className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-              Sort by
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="input-brand py-2 pr-8 min-w-[160px] cursor-pointer"
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+        <FadeInView delay={0.1}>
+          <div className="flex flex-col sm:flex-row justify-between gap-6 mb-10 pb-6 border-b border-border">
+            {/* Categories */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category, index) => (
+                <motion.button
+                  key={category.value}
+                  onClick={() => handleCategoryChange(category.value)}
+                  className={`px-4 py-2 font-display text-xs tracking-widest uppercase transition-colors ${
+                    categoryParam === category.value
+                      ? "bg-foreground text-background"
+                      : "bg-secondary text-foreground hover:bg-foreground hover:text-background"
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  {category.label}
+                </motion.button>
               ))}
-            </select>
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-3">
+              <label className="font-display text-xs tracking-widest uppercase text-muted-foreground">
+                Sort by
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="input-brand py-2 pr-8 min-w-[160px] cursor-pointer"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        </FadeInView>
 
         {/* Products Grid */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <motion.div 
+            className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8"
+            layout
+          >
+            {filteredProducts.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <div className="text-center py-20">
+          <FadeInView className="text-center py-20">
             <p className="text-muted-foreground text-lg mb-4">No products found</p>
             <button
               onClick={() => handleCategoryChange("all")}
@@ -118,7 +130,7 @@ const ShopPage = () => {
             >
               View All Products
             </button>
-          </div>
+          </FadeInView>
         )}
       </div>
     </main>
