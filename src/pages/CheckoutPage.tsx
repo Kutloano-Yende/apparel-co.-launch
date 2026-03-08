@@ -68,10 +68,14 @@ const PaymentForm = ({
       }
 
       if (paymentIntent?.status === "succeeded") {
-        // Save order to Supabase
+        // Get current user for linking order
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+        // Save order to database
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
+            user_id: currentUser?.id || null,
             email: formData.email,
             total_amount: finalTotal,
             shipping_cost: shippingCost,
