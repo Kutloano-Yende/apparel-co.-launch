@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, X, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Shield, Upload, ImageIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,10 @@ const AdminPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check admin role via security definer function
   useEffect(() => {
@@ -86,6 +90,28 @@ const AdminPage = () => {
     setForm(emptyForm);
     setEditingId(null);
     setShowForm(false);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage
+      .from("product-images")
+      .upload(fileName, file, { contentType: file.type });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(fileName);
+    return urlData.publicUrl;
   };
 
   const handleEdit = (product: any) => {
@@ -103,6 +129,8 @@ const AdminPage = () => {
     });
     setEditingId(product.id);
     setShowForm(true);
+    setImageFile(null);
+    setImagePreview(product.image);
   };
 
   const handleDelete = async (id: string) => {
@@ -120,11 +148,27 @@ const AdminPage = () => {
     e.preventDefault();
     setSaving(true);
 
+    try {
+      let imageUrl = form.image_url;
+      
+      // Upload image if a new file was selected
+      if (imageFile) {
+        setUploading(true);
+        imageUrl = await uploadImage(imageFile);
+        setUploading(false);
+      }
+
+      if (!imageUrl && !imageFile) {
+        toast({ title: "Please upload a product image", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
     const productData = {
       name: form.name,
       price: Number(form.price),
       original_price: form.original_price ? Number(form.original_price) : null,
-      image_url: form.image_url,
+      image_url: imageUrl,
       category: form.category,
       colors: form.colors.split(",").map((c) => c.trim()).filter(Boolean),
       sizes: form.sizes,
@@ -133,7 +177,6 @@ const AdminPage = () => {
       is_new: form.is_new,
     };
 
-    try {
       if (editingId) {
         const { error } = await supabase.from("products").update(productData).eq("id", editingId);
         if (error) throw error;
@@ -153,6 +196,7 @@ const AdminPage = () => {
       });
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
@@ -243,15 +287,50 @@ const AdminPage = () => {
               </div>
 
               <div>
-                <label className="font-display text-xs tracking-widest uppercase mb-2 block">Image URL</label>
+                <label className="font-display text-xs tracking-widest uppercase mb-2 block">Product Image</label>
                 <input
-                  type="text"
-                  value={form.image_url}
-                  onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
-                  required
-                  placeholder="/products/my-image.jpeg"
-                  className="input-brand"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
                 />
+                {imagePreview ? (
+                  <div className="relative w-32 h-32 bg-secondary mb-2">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setForm((p) => ({ ...p, image_url: "" }));
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-foreground text-background rounded-full flex items-center justify-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-border hover:border-foreground transition-colors p-8 flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <Upload size={24} />
+                    <span className="font-display text-xs tracking-widest uppercase">Click to upload image</span>
+                    <span className="text-xs">JPG, PNG, WebP</span>
+                  </button>
+                )}
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs underline text-muted-foreground hover:text-foreground mt-1"
+                  >
+                    Change image
+                  </button>
+                )}
               </div>
 
               <div>
@@ -317,8 +396,8 @@ const AdminPage = () => {
               </div>
 
               <div className="flex gap-3">
-                <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
-                  {saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
+                <button type="submit" disabled={saving || uploading} className="btn-primary disabled:opacity-50">
+                  {uploading ? "Uploading image..." : saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
                 </button>
                 <button type="button" onClick={resetForm} className="btn-secondary">
                   Cancel
