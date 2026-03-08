@@ -154,6 +154,7 @@ const PaymentForm = ({
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -168,6 +169,23 @@ const CheckoutPage = () => {
     postalCode: "",
     phone: "",
   });
+
+  // Auto-fill from profile when authenticated
+  useEffect(() => {
+    if (user && profile) {
+      setFormData((prev) => ({
+        ...prev,
+        email: user.email || prev.email,
+        firstName: profile.first_name || prev.firstName,
+        lastName: profile.last_name || prev.lastName,
+        address: profile.address || prev.address,
+        city: profile.city || prev.city,
+        province: profile.province || prev.province,
+        postalCode: profile.postal_code || prev.postalCode,
+        phone: profile.phone || prev.phone,
+      }));
+    }
+  }, [user, profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
