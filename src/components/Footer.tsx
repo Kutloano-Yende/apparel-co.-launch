@@ -44,6 +44,7 @@ const Footer = () => {
             <h4 className="font-display text-sm tracking-widest uppercase mb-6">Help</h4>
             <ul className="space-y-3">
               <li><a href="#" className="text-background/70 hover:text-background text-sm transition-colors">Contact Us</a></li>
+              <li><Link to="/track-order" className="text-background/70 hover:text-background text-sm transition-colors">Track Order</Link></li>
               <li><a href="#" className="text-background/70 hover:text-background text-sm transition-colors">Shipping Info</a></li>
               <li><a href="#" className="text-background/70 hover:text-background text-sm transition-colors">Returns & Exchanges</a></li>
               <li><a href="#" className="text-background/70 hover:text-background text-sm transition-colors">Size Guide</a></li>
