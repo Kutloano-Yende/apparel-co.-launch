@@ -148,11 +148,27 @@ const AdminPage = () => {
     e.preventDefault();
     setSaving(true);
 
+    try {
+      let imageUrl = form.image_url;
+      
+      // Upload image if a new file was selected
+      if (imageFile) {
+        setUploading(true);
+        imageUrl = await uploadImage(imageFile);
+        setUploading(false);
+      }
+
+      if (!imageUrl && !imageFile) {
+        toast({ title: "Please upload a product image", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
     const productData = {
       name: form.name,
       price: Number(form.price),
       original_price: form.original_price ? Number(form.original_price) : null,
-      image_url: form.image_url,
+      image_url: imageUrl,
       category: form.category,
       colors: form.colors.split(",").map((c) => c.trim()).filter(Boolean),
       sizes: form.sizes,
