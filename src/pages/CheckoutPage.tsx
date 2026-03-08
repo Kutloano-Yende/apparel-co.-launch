@@ -430,7 +430,7 @@ const PaymentSection = ({
   items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
   totalPrice: number;
   shippingCost: number;
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
 }) => {
   const { toast } = useToast();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
