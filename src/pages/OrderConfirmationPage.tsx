@@ -21,7 +21,7 @@ type OrderData = {
     postalCode?: string;
   };
   created_at: string;
-  items: Array<{
+  order_items: Array<{
     id: string;
     product_name: string;
     product_image: string;
@@ -34,7 +34,6 @@ type OrderData = {
 
 const OrderConfirmationPage = () => {
   const [searchParams] = useSearchParams();
-  const orderId = searchParams.get("order");
   const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,56 +42,26 @@ const OrderConfirmationPage = () => {
   useEffect(() => {
     const processOrder = async () => {
       try {
-        let resolvedOrderId = orderId;
+        if (!sessionId) {
+          setIsLoading(false);
+          return;
+        }
 
-        // If we have a session_id from Stripe Checkout, verify and create order
-        if (sessionId && !orderId) {
-          const { data, error } = await supabase.functions.invoke("verify-session", {
-            body: { session_id: sessionId },
-          });
+        const { data, error } = await supabase.functions.invoke("verify-session", {
+          body: { session_id: sessionId },
+        });
 
-          if (error || data?.error) {
-            console.error("Session verification error:", error || data?.error);
-            setIsLoading(false);
-            return;
-          }
+        if (error || data?.error) {
+          console.error("Session verification error:", error || data?.error);
+          setIsLoading(false);
+          return;
+        }
 
-          resolvedOrderId = data.order_id;
-          // Clear cart after successful payment
+        if (data?.order) {
+          setOrder(data.order as OrderData);
           clearCart();
-          // Clean up stored shipping data
           localStorage.removeItem("checkout_shipping");
         }
-
-        if (!resolvedOrderId) {
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch order details
-        const { data: orderData, error: orderError } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("id", resolvedOrderId)
-          .single();
-
-        if (orderError || !orderData) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: itemsData } = await supabase
-          .from("order_items")
-          .select("*")
-          .eq("order_id", resolvedOrderId);
-
-        const address = orderData.shipping_address as OrderData["shipping_address"];
-
-        setOrder({
-          ...orderData,
-          shipping_address: address,
-          items: itemsData || [],
-        });
       } catch (err) {
         console.error("Error processing order:", err);
       } finally {
@@ -101,13 +70,13 @@ const OrderConfirmationPage = () => {
     };
 
     processOrder();
-  }, [orderId, sessionId]);
+  }, [sessionId]);
 
   if (isLoading) {
     return (
       <main className="pt-24 md:pt-28 pb-16">
         <div className="container-brand text-center py-20">
-          <p className="text-muted-foreground">Loading order details...</p>
+          <p className="text-muted-foreground">Processing your order...</p>
         </div>
       </main>
     );
@@ -157,38 +126,42 @@ const OrderConfirmationPage = () => {
             </p>
           </div>
 
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Package size={18} className="text-muted-foreground" />
-              <h2 className="font-display text-lg tracking-wider uppercase">
-                Items Ordered
-              </h2>
+          {order.order_items && order.order_items.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Package size={18} className="text-muted-foreground" />
+                <h2 className="font-display text-lg tracking-wider uppercase">
+                  Items Ordered
+                </h2>
+              </div>
+              <div className="border border-border divide-y divide-border">
+                {order.order_items.map((item) => (
+                  <div key={item.id} className="flex gap-4 p-4">
+                    <div className="w-16 h-16 bg-secondary flex-shrink-0">
+                      {item.product_image && (
+                        <img
+                          src={item.product_image}
+                          alt={item.product_name}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-sm tracking-wide">
+                        {item.product_name}
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        {item.size} / {item.color} × {item.quantity}
+                      </p>
+                    </div>
+                    <div className="font-medium text-sm">
+                      {formatPrice(item.price * item.quantity)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="border border-border divide-y divide-border">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex gap-4 p-4">
-                  <div className="w-16 h-16 bg-secondary flex-shrink-0">
-                    <img
-                      src={item.product_image}
-                      alt={item.product_name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-sm tracking-wide">
-                      {item.product_name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {item.size} / {item.color} × {item.quantity}
-                    </p>
-                  </div>
-                  <div className="font-medium text-sm">
-                    {formatPrice(item.price * item.quantity)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
             <div>
