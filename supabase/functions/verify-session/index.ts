@@ -41,13 +41,13 @@ serve(async (req) => {
     // Check if order already exists for this session
     const { data: existingOrder } = await supabaseClient
       .from("orders")
-      .select("id")
+      .select("*, order_items(*)")
       .eq("stripe_payment_intent_id", session.payment_intent as string)
       .maybeSingle();
 
     if (existingOrder) {
       return new Response(
-        JSON.stringify({ order_id: existingOrder.id }),
+        JSON.stringify({ order: existingOrder }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
@@ -70,7 +70,7 @@ serve(async (req) => {
     // Calculate totals
     const totalAmount = (session.amount_total || 0) / 100;
     
-    // Find shipping line item to determine shipping cost
+    // Find shipping line item
     let shippingCost = 0;
     const lineItems = session.line_items?.data || [];
     const productItems = lineItems.filter(
@@ -102,7 +102,6 @@ serve(async (req) => {
 
     // Create order items from line items (exclude shipping)
     const orderItems = productItems.map((item: any) => {
-      // Parse description to extract size and color
       const desc = item.description || "";
       const sizeMatch = desc.match(/Size:\s*([^/]+)/);
       const colorMatch = desc.match(/Color:\s*(.+)/);
@@ -119,15 +118,18 @@ serve(async (req) => {
       };
     });
 
+    let savedItems: any[] = [];
     if (orderItems.length > 0) {
-      const { error: itemsError } = await supabaseClient
+      const { data: items, error: itemsError } = await supabaseClient
         .from("order_items")
-        .insert(orderItems);
+        .insert(orderItems)
+        .select();
       if (itemsError) console.error("Error saving order items:", itemsError);
+      savedItems = items || [];
     }
 
     return new Response(
-      JSON.stringify({ order_id: order.id }),
+      JSON.stringify({ order: { ...order, order_items: savedItems } }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
