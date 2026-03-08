@@ -192,9 +192,9 @@ const CheckoutPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleOrderSuccess = () => {
+  const handleOrderSuccess = (orderId: string) => {
     clearCart();
-    navigate("/");
+    navigate(`/order-confirmation?order=${orderId}`);
   };
 
   if (items.length === 0) {

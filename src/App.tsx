@@ -36,6 +36,7 @@ const App = () => (
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
