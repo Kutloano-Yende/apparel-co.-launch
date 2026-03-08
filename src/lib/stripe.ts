@@ -1,6 +1,6 @@
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_51T8m7TFCQqTpVXWk8Vj4073F";
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
