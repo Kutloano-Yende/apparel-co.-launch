@@ -187,7 +187,7 @@ const DashboardView = () => {
       setOrdersLoading(true);
       supabase
         .from("orders")
-        .select("*")
+        .select("*, order_items(*)")
         .order("created_at", { ascending: false })
         .then(({ data }) => {
           setOrders(data || []);
