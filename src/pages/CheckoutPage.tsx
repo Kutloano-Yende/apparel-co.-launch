@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, CreditCard } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -435,8 +435,13 @@ const PaymentSection = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
 
+  const stripePromise = useMemo(() => getStripe(), []);
+  const elementsOptions = useMemo(() => clientSecret ? ({
+    clientSecret,
+    appearance: { theme: "stripe" as const },
+  }) : null, [clientSecret]);
+
   // Only create payment intent once when component mounts or total changes
-  // Do NOT depend on email - it causes Elements to remount on every keystroke
   useEffect(() => {
     const createIntent = async () => {
       if (finalTotal <= 0) return;
@@ -473,7 +478,7 @@ const PaymentSection = ({
     );
   }
 
-  if (!clientSecret) {
+  if (!clientSecret || !elementsOptions) {
     return (
       <div>
         <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
@@ -501,15 +506,7 @@ const PaymentSection = ({
   return (
     <div>
       <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
-      <Elements
-        stripe={getStripe()}
-        options={{
-          clientSecret,
-          appearance: {
-            theme: "stripe",
-          },
-        }}
-      >
+      <Elements stripe={stripePromise} options={elementsOptions}>
         <PaymentForm
           formData={formData}
           finalTotal={finalTotal}
