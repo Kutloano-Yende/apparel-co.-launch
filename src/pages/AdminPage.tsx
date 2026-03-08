@@ -396,8 +396,8 @@ const AdminPage = () => {
               </div>
 
               <div className="flex gap-3">
-                <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
-                  {saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
+                <button type="submit" disabled={saving || uploading} className="btn-primary disabled:opacity-50">
+                  {uploading ? "Uploading image..." : saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
                 </button>
                 <button type="button" onClick={resetForm} className="btn-secondary">
                   Cancel
