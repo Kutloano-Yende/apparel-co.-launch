@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, CreditCard } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/products";
 import { useToast } from "@/hooks/use-toast";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripe";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { createPaymentIntent } from "@/lib/api";
 
 // Payment Form Component (wrapped in Stripe Elements)
@@ -67,10 +68,14 @@ const PaymentForm = ({
       }
 
       if (paymentIntent?.status === "succeeded") {
-        // Save order to Supabase
+        // Get current user for linking order
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+        // Save order to database
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
+            user_id: currentUser?.id || null,
             email: formData.email,
             total_amount: finalTotal,
             shipping_cost: shippingCost,
@@ -107,14 +112,6 @@ const PaymentForm = ({
         const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
 
         if (itemsError) throw itemsError;
-
-        // Save or update customer
-        await supabase.from("customers").upsert({
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-        });
 
         toast({
           title: "Order placed successfully!",
@@ -157,6 +154,7 @@ const PaymentForm = ({
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -171,6 +169,23 @@ const CheckoutPage = () => {
     postalCode: "",
     phone: "",
   });
+
+  // Auto-fill from profile when authenticated
+  useEffect(() => {
+    if (user && profile) {
+      setFormData((prev) => ({
+        ...prev,
+        email: user.email || prev.email,
+        firstName: profile.first_name || prev.firstName,
+        lastName: profile.last_name || prev.lastName,
+        address: profile.address || prev.address,
+        city: profile.city || prev.city,
+        province: profile.province || prev.province,
+        postalCode: profile.postal_code || prev.postalCode,
+        phone: profile.phone || prev.phone,
+      }));
+    }
+  }, [user, profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
