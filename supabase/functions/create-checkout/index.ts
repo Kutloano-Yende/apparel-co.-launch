@@ -34,18 +34,26 @@ serve(async (req) => {
     }
 
     // Build line items from cart
-    const line_items = items.map((item: any) => ({
-      price_data: {
-        currency: "zar",
-        product_data: {
-          name: item.product_name,
-          images: item.product_image ? [item.product_image] : [],
-          description: `Size: ${item.size} / Color: ${item.color}`,
+    const line_items = items.map((item: any) => {
+      // Only include images that are valid absolute URLs
+      const images: string[] = [];
+      if (item.product_image && (item.product_image.startsWith("http://") || item.product_image.startsWith("https://"))) {
+        images.push(item.product_image);
+      }
+
+      return {
+        price_data: {
+          currency: "zar",
+          product_data: {
+            name: item.product_name,
+            ...(images.length > 0 ? { images } : {}),
+            description: `Size: ${item.size} / Color: ${item.color}`,
+          },
+          unit_amount: Math.round(item.price * 100),
         },
-        unit_amount: Math.round(item.price * 100), // Convert to cents
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
 
     // Add shipping as a line item if applicable
     if (shipping_cost && shipping_cost > 0) {
