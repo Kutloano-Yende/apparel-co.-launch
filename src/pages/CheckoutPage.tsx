@@ -35,7 +35,7 @@ const PaymentForm = ({
   items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
   totalPrice: number;
   shippingCost: number;
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
   clientSecret: string;
 }) => {
   const stripe = useStripe();
