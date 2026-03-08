@@ -129,6 +129,8 @@ const AdminPage = () => {
     });
     setEditingId(product.id);
     setShowForm(true);
+    setImageFile(null);
+    setImagePreview(product.image);
   };
 
   const handleDelete = async (id: string) => {
