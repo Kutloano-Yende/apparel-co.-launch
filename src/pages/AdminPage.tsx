@@ -177,7 +177,6 @@ const AdminPage = () => {
       is_new: form.is_new,
     };
 
-    try {
       if (editingId) {
         const { error } = await supabase.from("products").update(productData).eq("id", editingId);
         if (error) throw error;
@@ -197,6 +196,7 @@ const AdminPage = () => {
       });
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
