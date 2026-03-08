@@ -435,31 +435,29 @@ const PaymentSection = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
 
+  // Only create payment intent once when component mounts or total changes
+  // Do NOT depend on email - it causes Elements to remount on every keystroke
   useEffect(() => {
     const createIntent = async () => {
-      if (!formData.email || finalTotal <= 0) return;
+      if (finalTotal <= 0) return;
 
       setIsLoadingPayment(true);
       try {
         const response = await createPaymentIntent({
           amount: finalTotal,
           currency: "zar",
-          metadata: {
-            email: formData.email,
-          },
+          metadata: {},
         });
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Error creating payment intent:", error);
-        // Don't show error toast immediately - it might be because backend isn't set up yet
-        // The payment section will show a message instead
       } finally {
         setIsLoadingPayment(false);
       }
     };
 
     createIntent();
-  }, [formData.email, finalTotal]);
+  }, [finalTotal]);
 
   if (isLoadingPayment) {
     return (
