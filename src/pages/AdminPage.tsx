@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProducts } from "@/hooks/useProducts";
 import { formatPrice } from "@/lib/products";
 import { useQueryClient } from "@tanstack/react-query";
+import OrderManagement from "@/components/admin/OrderManagement";
 
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
