@@ -157,7 +157,15 @@ const Header = () => {
                     </Link>
                   </motion.div>
                 ))}
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: navLinks.length * 0.05 }}>
+                {isAdmin && (
+                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: navLinks.length * 0.05 }}>
+                    <Link to="/admin" className="font-display text-lg tracking-wider uppercase py-2 flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Shield size={16} />
+                      Admin
+                    </Link>
+                  </motion.div>
+                )}
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: (navLinks.length + (isAdmin ? 1 : 0)) * 0.05 }}>
                   <Link to="/account" className="font-display text-lg tracking-wider uppercase py-2 block" onClick={() => setIsMobileMenuOpen(false)}>
                     {user ? "My Account" : "Sign In"}
                   </Link>
