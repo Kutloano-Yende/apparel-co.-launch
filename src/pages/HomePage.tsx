@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
-import { getFeaturedProducts } from "@/lib/products";
+import { useFeaturedProducts } from "@/hooks/useProducts";
 import FadeInView from "@/components/animations/FadeInView";
 import heroPromo from "@/assets/products/hero-promo.jpeg";
 
 const HomePage = () => {
-  const featuredProducts = getFeaturedProducts();
+  const { data: featuredProducts = [] } = useFeaturedProducts();
 
   return (
     <main className="pt-16 md:pt-20">
@@ -115,10 +115,7 @@ const HomePage = () => {
               <h2 className="section-heading">Featured</h2>
             </FadeInView>
             <FadeInView direction="left">
-              <Link
-                to="/shop"
-                className="nav-link hidden sm:block"
-              >
+              <Link to="/shop" className="nav-link hidden sm:block">
                 View All
               </Link>
             </FadeInView>
