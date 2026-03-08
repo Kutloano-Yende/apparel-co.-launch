@@ -321,10 +321,30 @@ const DashboardView = () => {
                       {order.status}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                     <span>{new Date(order.created_at).toLocaleDateString()}</span>
                     <span className="font-medium text-foreground">{formatPrice(Number(order.total_amount))}</span>
                   </div>
+                  {order.order_items && order.order_items.length > 0 && (
+                    <div className="border-t border-border pt-4 space-y-3">
+                      {order.order_items.map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-secondary flex-shrink-0">
+                            <img
+                              src={item.product_image}
+                              alt={item.product_name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-display text-xs tracking-wide truncate">{item.product_name}</p>
+                            <p className="text-xs text-muted-foreground">{item.size} / {item.color} × {item.quantity}</p>
+                          </div>
+                          <span className="text-sm">{formatPrice(Number(item.price) * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
