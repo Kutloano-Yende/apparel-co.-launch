@@ -479,6 +479,8 @@ const AdminPage = () => {
             ))}
           </div>
         )}
+        </>
+        )}
       </div>
     </main>
   );
