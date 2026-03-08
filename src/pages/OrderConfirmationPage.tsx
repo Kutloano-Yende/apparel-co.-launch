@@ -4,6 +4,7 @@ import { CheckCircle, Package, MapPin, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice } from "@/lib/products";
 import FadeInView from "@/components/animations/FadeInView";
+import { useCart } from "@/context/CartContext";
 
 type OrderData = {
   id: string;
@@ -34,44 +35,73 @@ type OrderData = {
 const OrderConfirmationPage = () => {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("order");
+  const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { clearCart } = useCart();
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      if (!orderId) {
+    const processOrder = async () => {
+      try {
+        let resolvedOrderId = orderId;
+
+        // If we have a session_id from Stripe Checkout, verify and create order
+        if (sessionId && !orderId) {
+          const { data, error } = await supabase.functions.invoke("verify-session", {
+            body: { session_id: sessionId },
+          });
+
+          if (error || data?.error) {
+            console.error("Session verification error:", error || data?.error);
+            setIsLoading(false);
+            return;
+          }
+
+          resolvedOrderId = data.order_id;
+          // Clear cart after successful payment
+          clearCart();
+          // Clean up stored shipping data
+          localStorage.removeItem("checkout_shipping");
+        }
+
+        if (!resolvedOrderId) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch order details
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", resolvedOrderId)
+          .single();
+
+        if (orderError || !orderData) {
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: itemsData } = await supabase
+          .from("order_items")
+          .select("*")
+          .eq("order_id", resolvedOrderId);
+
+        const address = orderData.shipping_address as OrderData["shipping_address"];
+
+        setOrder({
+          ...orderData,
+          shipping_address: address,
+          items: itemsData || [],
+        });
+      } catch (err) {
+        console.error("Error processing order:", err);
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .single();
-
-      if (orderError || !orderData) {
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: itemsData } = await supabase
-        .from("order_items")
-        .select("*")
-        .eq("order_id", orderId);
-
-      const address = orderData.shipping_address as OrderData["shipping_address"];
-
-      setOrder({
-        ...orderData,
-        shipping_address: address,
-        items: itemsData || [],
-      });
-      setIsLoading(false);
     };
 
-    fetchOrder();
-  }, [orderId]);
+    processOrder();
+  }, [orderId, sessionId]);
 
   if (isLoading) {
     return (
@@ -105,7 +135,6 @@ const OrderConfirmationPage = () => {
     <main className="pt-24 md:pt-28 pb-16 md:pb-24">
       <div className="container-brand max-w-3xl">
         <FadeInView>
-          {/* Success Header */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-6">
               <CheckCircle size={64} className="text-foreground" />
@@ -119,7 +148,6 @@ const OrderConfirmationPage = () => {
             </p>
           </div>
 
-          {/* Order Number */}
           <div className="border border-border p-6 mb-8 text-center">
             <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">
               Order Number
@@ -129,7 +157,6 @@ const OrderConfirmationPage = () => {
             </p>
           </div>
 
-          {/* Order Items */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Package size={18} className="text-muted-foreground" />
@@ -163,9 +190,7 @@ const OrderConfirmationPage = () => {
             </div>
           </div>
 
-          {/* Summary & Shipping */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
-            {/* Shipping Address */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <MapPin size={18} className="text-muted-foreground" />
@@ -185,7 +210,6 @@ const OrderConfirmationPage = () => {
               </div>
             </div>
 
-            {/* Order Total */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Mail size={18} className="text-muted-foreground" />
@@ -212,11 +236,15 @@ const OrderConfirmationPage = () => {
             </div>
           </div>
 
-          {/* CTA */}
-          <div className="text-center">
-            <Link to="/shop" className="btn-primary inline-block">
-              Continue Shopping
+          <div className="text-center space-y-4">
+            <Link to="/track-order" className="btn-primary inline-block">
+              Track Your Order
             </Link>
+            <div>
+              <Link to="/shop" className="text-sm text-muted-foreground hover:text-foreground transition-colors underline">
+                Continue Shopping
+              </Link>
+            </div>
           </div>
         </FadeInView>
       </div>
