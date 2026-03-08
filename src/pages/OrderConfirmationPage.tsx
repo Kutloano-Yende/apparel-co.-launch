@@ -108,7 +108,7 @@ const OrderConfirmationPage = () => {
           {/* Success Header */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-6">
-              <CheckCircle size={64} className="text-green-600" />
+              <CheckCircle size={64} className="text-foreground" />
             </div>
             <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight uppercase mb-3">
               Order Confirmed
