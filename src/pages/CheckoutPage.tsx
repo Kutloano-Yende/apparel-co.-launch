@@ -113,14 +113,6 @@ const PaymentForm = ({
 
         if (itemsError) throw itemsError;
 
-        // Save or update customer
-        await supabase.from("customers").upsert({
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-        });
-
         toast({
           title: "Order placed successfully!",
           description: "Thank you for your purchase. You'll receive a confirmation email shortly.",
