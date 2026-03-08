@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Menu, X, User, LogOut } from "lucide-react";
+import { ShoppingBag, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { totalItems, setIsCartOpen } = useCart();
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) { setIsAdmin(false); return; }
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      setIsAdmin(!!data);
+    };
+    checkAdmin();
+  }, [user]);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -71,6 +82,14 @@ const Header = () => {
                 </Link>
               </motion.div>
             ))}
+            {isAdmin && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: navLinks.length * 0.1 + 0.2 }}>
+                <Link to="/admin" className={`nav-link flex items-center gap-1.5 ${isActive("/admin") ? "text-foreground" : ""}`}>
+                  <Shield size={14} />
+                  Admin
+                </Link>
+              </motion.div>
+            )}
           </nav>
 
           {/* Actions */}
@@ -138,7 +157,15 @@ const Header = () => {
                     </Link>
                   </motion.div>
                 ))}
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: navLinks.length * 0.05 }}>
+                {isAdmin && (
+                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: navLinks.length * 0.05 }}>
+                    <Link to="/admin" className="font-display text-lg tracking-wider uppercase py-2 flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Shield size={16} />
+                      Admin
+                    </Link>
+                  </motion.div>
+                )}
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ delay: (navLinks.length + (isAdmin ? 1 : 0)) * 0.05 }}>
                   <Link to="/account" className="font-display text-lg tracking-wider uppercase py-2 block" onClick={() => setIsMobileMenuOpen(false)}>
                     {user ? "My Account" : "Sign In"}
                   </Link>
