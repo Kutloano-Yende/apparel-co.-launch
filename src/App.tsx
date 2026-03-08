@@ -16,6 +16,7 @@ import AccountPage from "@/pages/AccountPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import AdminPage from "@/pages/AdminPage";
+import TrackOrderPage from "@/pages/TrackOrderPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();

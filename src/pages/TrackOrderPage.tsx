@@ -3,7 +3,7 @@ import { Package, Search, CheckCircle2, Truck, Clock, XCircle, ArrowRight } from
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/products";
-import { FadeInView } from "@/components/animations/FadeInView";
+import FadeInView from "@/components/animations/FadeInView";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 
