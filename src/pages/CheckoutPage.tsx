@@ -498,18 +498,16 @@ const PaymentSection = ({
     );
   }
 
+  const stripePromise = useMemo(() => getStripe(), []);
+  const elementsOptions = useMemo(() => ({
+    clientSecret,
+    appearance: { theme: "stripe" as const },
+  }), [clientSecret]);
+
   return (
     <div>
       <h2 className="font-display text-lg tracking-wider uppercase mb-4">Payment</h2>
-      <Elements
-        stripe={getStripe()}
-        options={{
-          clientSecret,
-          appearance: {
-            theme: "stripe",
-          },
-        }}
-      >
+      <Elements stripe={stripePromise} options={elementsOptions}>
         <PaymentForm
           formData={formData}
           finalTotal={finalTotal}
