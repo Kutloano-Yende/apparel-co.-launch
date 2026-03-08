@@ -82,6 +82,14 @@ const Header = () => {
                 </Link>
               </motion.div>
             ))}
+            {isAdmin && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: navLinks.length * 0.1 + 0.2 }}>
+                <Link to="/admin" className={`nav-link flex items-center gap-1.5 ${isActive("/admin") ? "text-foreground" : ""}`}>
+                  <Shield size={14} />
+                  Admin
+                </Link>
+              </motion.div>
+            )}
           </nav>
 
           {/* Actions */}
