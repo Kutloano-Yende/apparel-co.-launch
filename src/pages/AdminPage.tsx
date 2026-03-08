@@ -32,6 +32,7 @@ const AdminPage = () => {
   const queryClient = useQueryClient();
   const { data: products, isLoading: productsLoading } = useProducts();
 
+  const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
   const [showForm, setShowForm] = useState(false);
