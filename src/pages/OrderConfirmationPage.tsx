@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, Package, MapPin, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice } from "@/lib/products";
-import { FadeInView } from "@/components/animations/FadeInView";
+import FadeInView from "@/components/animations/FadeInView";
 
 type OrderData = {
   id: string;
