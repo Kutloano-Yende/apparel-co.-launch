@@ -287,15 +287,50 @@ const AdminPage = () => {
               </div>
 
               <div>
-                <label className="font-display text-xs tracking-widest uppercase mb-2 block">Image URL</label>
+                <label className="font-display text-xs tracking-widest uppercase mb-2 block">Product Image</label>
                 <input
-                  type="text"
-                  value={form.image_url}
-                  onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
-                  required
-                  placeholder="/products/my-image.jpeg"
-                  className="input-brand"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
                 />
+                {imagePreview ? (
+                  <div className="relative w-32 h-32 bg-secondary mb-2">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setForm((p) => ({ ...p, image_url: "" }));
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-foreground text-background rounded-full flex items-center justify-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-border hover:border-foreground transition-colors p-8 flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <Upload size={24} />
+                    <span className="font-display text-xs tracking-widest uppercase">Click to upload image</span>
+                    <span className="text-xs">JPG, PNG, WebP</span>
+                  </button>
+                )}
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs underline text-muted-foreground hover:text-foreground mt-1"
+                  >
+                    Change image
+                  </button>
+                )}
               </div>
 
               <div>
