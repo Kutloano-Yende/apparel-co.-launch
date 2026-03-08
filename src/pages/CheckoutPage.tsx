@@ -35,7 +35,7 @@ const PaymentForm = ({
   items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
   totalPrice: number;
   shippingCost: number;
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
   clientSecret: string;
 }) => {
   const stripe = useStripe();
@@ -118,7 +118,7 @@ const PaymentForm = ({
           description: "Thank you for your purchase. You'll receive a confirmation email shortly.",
         });
 
-        onSuccess();
+        onSuccess(order.id);
       }
     } catch (error) {
       console.error("Payment error:", error);
@@ -192,9 +192,9 @@ const CheckoutPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleOrderSuccess = () => {
+  const handleOrderSuccess = (orderId: string) => {
     clearCart();
-    navigate("/");
+    navigate(`/order-confirmation?order=${orderId}`);
   };
 
   if (items.length === 0) {
@@ -430,7 +430,7 @@ const PaymentSection = ({
   items: Array<{ product: { id: string; name: string; image: string; price: number }; size: string; color: string; quantity: number }>;
   totalPrice: number;
   shippingCost: number;
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
 }) => {
   const { toast } = useToast();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
