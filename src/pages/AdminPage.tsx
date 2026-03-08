@@ -214,10 +214,38 @@ const AdminPage = () => {
   return (
     <main className="pt-24 md:pt-28 pb-16 md:pb-24">
       <div className="container-brand max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="section-heading mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Manage your store</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-0 border-b border-border mb-8">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`font-display text-sm tracking-widest uppercase px-6 py-3 border-b-2 transition-colors ${
+              activeTab === "products" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Products
+          </button>
+          <button
+            onClick={() => setActiveTab("orders")}
+            className={`font-display text-sm tracking-widest uppercase px-6 py-3 border-b-2 transition-colors ${
+              activeTab === "orders" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Orders
+          </button>
+        </div>
+
+        {activeTab === "orders" ? (
+          <OrderManagement />
+        ) : (
+        <>
         <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="section-heading mb-2">Admin — Products</h1>
-            <p className="text-muted-foreground text-sm">Manage your product catalog</p>
+            <h2 className="font-display text-lg tracking-wider uppercase">Products</h2>
           </div>
           {!showForm && (
             <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
