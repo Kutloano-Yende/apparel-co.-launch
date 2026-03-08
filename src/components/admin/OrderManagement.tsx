@@ -64,6 +64,29 @@ const OrderManagement = () => {
     } else {
       toast({ title: `Order status updated to ${newStatus}` });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+
+      // Send email notification
+      const order = orders?.find((o) => o.id === orderId);
+      if (order) {
+        try {
+          const { error: emailError } = await supabase.functions.invoke("send-order-email", {
+            body: {
+              email: order.email,
+              status: newStatus,
+              orderId: order.id,
+              items: order.order_items,
+            },
+          });
+          if (emailError) {
+            console.error("Email notification error:", emailError);
+            toast({ title: "Status updated, but email failed to send", description: String(emailError), variant: "destructive" });
+          } else {
+            toast({ title: "Email notification sent to customer" });
+          }
+        } catch (e) {
+          console.error("Email send error:", e);
+        }
+      }
     }
     setUpdatingId(null);
   };
