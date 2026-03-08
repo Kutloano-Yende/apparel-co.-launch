@@ -118,7 +118,7 @@ const PaymentForm = ({
           description: "Thank you for your purchase. You'll receive a confirmation email shortly.",
         });
 
-        onSuccess();
+        onSuccess(order.id);
       }
     } catch (error) {
       console.error("Payment error:", error);
