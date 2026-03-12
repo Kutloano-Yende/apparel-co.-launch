@@ -42,6 +42,7 @@ const AdminPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check admin role via security definer function
