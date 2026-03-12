@@ -126,6 +126,7 @@ const ShopPage = () => {
           </FadeInView>
         )}
       </div>
+      <ProductChatbot />
     </main>
   );
 };
