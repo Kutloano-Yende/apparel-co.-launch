@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 import { useProductsByCategory } from "@/hooks/useProducts";
 import FadeInView from "@/components/animations/FadeInView";
+import ProductChatbot from "@/components/ProductChatbot";
 
 const categories = [
   { value: "all", label: "All Products" },
