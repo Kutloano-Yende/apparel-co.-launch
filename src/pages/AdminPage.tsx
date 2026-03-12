@@ -396,12 +396,48 @@ const AdminPage = () => {
               </div>
 
               <div>
-                <label className="font-display text-xs tracking-widest uppercase mb-2 block">Description</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-display text-xs tracking-widest uppercase">Description</label>
+                  <button
+                    type="button"
+                    disabled={!form.name || generatingDesc}
+                    onClick={async () => {
+                      setGeneratingDesc(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("generate-description", {
+                          body: {
+                            name: form.name,
+                            category: form.category,
+                            colors: form.colors,
+                            sizes: form.sizes.join(", "),
+                          },
+                        });
+                        if (error) throw error;
+                        if (data?.error) throw new Error(data.error);
+                        setForm((p) => ({ ...p, description: data.description }));
+                        toast({ title: "Description generated!" });
+                      } catch (err) {
+                        toast({
+                          title: "Failed to generate description",
+                          description: err instanceof Error ? err.message : "Try again",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setGeneratingDesc(false);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-display tracking-widest uppercase text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+                  >
+                    <Sparkles size={14} />
+                    {generatingDesc ? "Generating..." : "AI Generate"}
+                  </button>
+                </div>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                   rows={3}
                   className="input-brand resize-none"
+                  placeholder={generatingDesc ? "Generating description with AI..." : "Enter product description..."}
                 />
               </div>
 

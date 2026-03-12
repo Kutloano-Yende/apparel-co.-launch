@@ -2,3 +2,6 @@ project_id = "ldmstuidmzjdbdbognly"
 
 [functions.product-chat]
 verify_jwt = false
+
+[functions.generate-description]
+verify_jwt = false
