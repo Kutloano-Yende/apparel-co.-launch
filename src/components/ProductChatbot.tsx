@@ -77,11 +77,21 @@ const SUGGESTIONS = [
 ];
 
 const ProductChatbot = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleLinkClick = useCallback((href: string) => {
+    if (href.startsWith("/product/")) {
+      setOpen(false);
+      navigate(href);
+    } else {
+      window.open(href, "_blank", "noopener");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (scrollRef.current) {
