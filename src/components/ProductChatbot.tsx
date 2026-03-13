@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,11 +77,21 @@ const SUGGESTIONS = [
 ];
 
 const ProductChatbot = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleLinkClick = useCallback((href: string) => {
+    if (href.startsWith("/product/")) {
+      setOpen(false);
+      navigate(href);
+    } else {
+      window.open(href, "_blank", "noopener");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -193,7 +204,21 @@ const ProductChatbot = () => {
                     >
                       {m.role === "assistant" ? (
                         <div className="prose prose-sm max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0">
-                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ href, children }) => (
+                                <button
+                                  type="button"
+                                  onClick={() => href && handleLinkClick(href)}
+                                  className="underline font-semibold text-foreground hover:opacity-70 transition-opacity cursor-pointer"
+                                >
+                                  {children}
+                                </button>
+                              ),
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
                         </div>
                       ) : (
                         m.content
