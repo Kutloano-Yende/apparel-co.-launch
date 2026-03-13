@@ -96,6 +96,7 @@ const AdminPage = () => {
     setShowForm(false);
     setImageFile(null);
     setImagePreview(null);
+    setDescVariants([]);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
