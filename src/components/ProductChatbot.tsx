@@ -181,9 +181,16 @@ const ProductChatbot = () => {
                 <Sparkles className="h-4 w-4" />
                 <span className="font-display text-xs tracking-widest uppercase">Style Assistant</span>
               </div>
-              <button onClick={() => setOpen(false)} className="text-background/70 hover:text-background">
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {messages.length > 0 && (
+                  <button onClick={clearChat} className="text-background/50 hover:text-background" title="Clear chat">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="text-background/70 hover:text-background">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
