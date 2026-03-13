@@ -204,7 +204,21 @@ const ProductChatbot = () => {
                     >
                       {m.role === "assistant" ? (
                         <div className="prose prose-sm max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0">
-                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ href, children }) => (
+                                <button
+                                  type="button"
+                                  onClick={() => href && handleLinkClick(href)}
+                                  className="underline font-semibold text-foreground hover:opacity-70 transition-opacity cursor-pointer"
+                                >
+                                  {children}
+                                </button>
+                              ),
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
                         </div>
                       ) : (
                         m.content
