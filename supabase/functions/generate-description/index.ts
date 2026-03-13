@@ -10,17 +10,17 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { name, category, colors, sizes } = await req.json();
+    const { name, category, colors, sizes, count = 3 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const prompt = `Write a compelling, concise product description (2-3 sentences max) for a streetwear/fashion product with the following details:
+    const prompt = `Write exactly ${count} different compelling product descriptions (2-3 sentences each) for a streetwear/fashion product with these details:
 - Product name: ${name}
 - Category: ${category}
 - Available colors: ${colors || "N/A"}
 - Available sizes: ${sizes || "N/A"}
 
-The tone should be bold, fashion-forward, and appeal to a streetwear audience. Do NOT include the product name or price in the description. Just return the description text, no quotes or formatting.`;
+Each description should have a distinctly different tone/angle (e.g. one bold & edgy, one minimal & clean, one playful & energetic). Do NOT include the product name or price. Return ONLY a JSON array of strings, no other text. Example: ["desc1", "desc2", "desc3"]`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -31,7 +31,7 @@ The tone should be bold, fashion-forward, and appeal to a streetwear audience. D
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "You are a creative copywriter for a streetwear fashion brand called Apparel Co. Write concise, punchy product descriptions." },
+          { role: "system", content: "You are a creative copywriter for a streetwear fashion brand called Apparel Co. Always return valid JSON arrays when asked." },
           { role: "user", content: prompt },
         ],
       }),
@@ -56,9 +56,21 @@ The tone should be bold, fashion-forward, and appeal to a streetwear audience. D
     }
 
     const data = await response.json();
-    const description = data.choices?.[0]?.message?.content?.trim() || "";
+    const raw = data.choices?.[0]?.message?.content?.trim() || "";
 
-    return new Response(JSON.stringify({ description }), {
+    // Parse the JSON array from the response
+    let descriptions: string[] = [];
+    try {
+      // Strip markdown code fences if present
+      const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      descriptions = JSON.parse(cleaned);
+      if (!Array.isArray(descriptions)) descriptions = [raw];
+    } catch {
+      // Fallback: return as single description
+      descriptions = [raw];
+    }
+
+    return new Response(JSON.stringify({ descriptions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

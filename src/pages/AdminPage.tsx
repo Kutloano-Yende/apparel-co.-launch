@@ -43,6 +43,7 @@ const AdminPage = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [descVariants, setDescVariants] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check admin role via security definer function
@@ -95,6 +96,7 @@ const AdminPage = () => {
     setShowForm(false);
     setImageFile(null);
     setImagePreview(null);
+    setDescVariants([]);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,6 +405,7 @@ const AdminPage = () => {
                     disabled={!form.name || generatingDesc}
                     onClick={async () => {
                       setGeneratingDesc(true);
+                      setDescVariants([]);
                       try {
                         const { data, error } = await supabase.functions.invoke("generate-description", {
                           body: {
@@ -410,12 +413,19 @@ const AdminPage = () => {
                             category: form.category,
                             colors: form.colors,
                             sizes: form.sizes.join(", "),
+                            count: 3,
                           },
                         });
                         if (error) throw error;
                         if (data?.error) throw new Error(data.error);
-                        setForm((p) => ({ ...p, description: data.description }));
-                        toast({ title: "Description generated!" });
+                        const variants = data.descriptions || [];
+                        if (variants.length === 1) {
+                          setForm((p) => ({ ...p, description: variants[0] }));
+                          toast({ title: "Description generated!" });
+                        } else if (variants.length > 1) {
+                          setDescVariants(variants);
+                          toast({ title: `${variants.length} variants generated — pick your favorite!` });
+                        }
                       } catch (err) {
                         toast({
                           title: "Failed to generate description",
@@ -429,15 +439,42 @@ const AdminPage = () => {
                     className="flex items-center gap-1.5 text-xs font-display tracking-widest uppercase text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
                   >
                     <Sparkles size={14} />
-                    {generatingDesc ? "Generating..." : "AI Generate"}
+                    {generatingDesc ? "Generating..." : "AI Generate (3 variants)"}
                   </button>
                 </div>
+
+                {/* Variant picker */}
+                {descVariants.length > 1 && (
+                  <div className="space-y-2 mb-3">
+                    <p className="text-xs text-muted-foreground font-display tracking-wider uppercase">Choose a variant:</p>
+                    {descVariants.map((variant, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setForm((p) => ({ ...p, description: variant }));
+                          setDescVariants([]);
+                          toast({ title: `Variant ${i + 1} selected` });
+                        }}
+                        className={`w-full text-left p-3 border transition-all text-sm leading-relaxed ${
+                          form.description === variant
+                            ? "border-foreground bg-foreground/5"
+                            : "border-border hover:border-foreground/50"
+                        }`}
+                      >
+                        <span className="font-display text-[10px] tracking-widest uppercase text-muted-foreground block mb-1">Variant {i + 1}</span>
+                        {variant}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                   rows={3}
                   className="input-brand resize-none"
-                  placeholder={generatingDesc ? "Generating description with AI..." : "Enter product description..."}
+                  placeholder={generatingDesc ? "Generating description variants..." : "Enter product description..."}
                 />
               </div>
 
