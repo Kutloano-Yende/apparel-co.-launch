@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import ProductSearch from "@/components/ProductSearch";
 import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
