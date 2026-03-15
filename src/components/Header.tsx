@@ -100,6 +100,7 @@ const Header = () => {
                 {displayName}
               </span>
             )}
+            <ProductSearch />
             <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}>
               <Link to="/account" className="p-2 hover:opacity-70 transition-opacity">
                 <User size={22} />
