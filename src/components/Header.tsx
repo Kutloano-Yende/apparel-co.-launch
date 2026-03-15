@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import ProductSearch from "@/components/ProductSearch";
 import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
@@ -99,6 +100,7 @@ const Header = () => {
                 {displayName}
               </span>
             )}
+            <ProductSearch />
             <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}>
               <Link to="/account" className="p-2 hover:opacity-70 transition-opacity">
                 <User size={22} />
