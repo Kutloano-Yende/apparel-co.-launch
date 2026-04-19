@@ -56,6 +56,15 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </span>
             )}
           </div>
+          {stat && stat.count > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <Star size={12} className="fill-foreground text-foreground" />
+              <span className="text-xs font-medium">{stat.average.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">
+                ({stat.count} review{stat.count !== 1 ? "s" : ""})
+              </span>
+            </div>
+          )}
           <div className="flex gap-2 mt-3">
             {product.colors.slice(0, 4).map((color) => (
               <span key={color} className="text-xs text-muted-foreground">
