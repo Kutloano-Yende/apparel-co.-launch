@@ -7,6 +7,7 @@ import { useProduct } from "@/hooks/useProducts";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import FadeInView from "@/components/animations/FadeInView";
+import ProductReviews from "@/components/ProductReviews";
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -225,6 +226,8 @@ const ProductDetailPage = () => {
             </FadeInView>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
       </div>
     </main>
   );
