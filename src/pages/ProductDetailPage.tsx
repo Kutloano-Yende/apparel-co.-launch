@@ -226,6 +226,8 @@ const ProductDetailPage = () => {
             </FadeInView>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
       </div>
     </main>
   );
