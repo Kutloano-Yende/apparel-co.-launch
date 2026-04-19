@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Star } from "lucide-react";
 import { Product, formatPrice } from "@/lib/products";
+import { useReviewStats } from "@/hooks/useReviewStats";
 
 interface ProductCardProps {
   product: Product;
@@ -8,6 +10,8 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+  const { data: stats } = useReviewStats();
+  const stat = stats?.[product.id];
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -52,6 +56,15 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </span>
             )}
           </div>
+          {stat && stat.count > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <Star size={12} className="fill-foreground text-foreground" />
+              <span className="text-xs font-medium">{stat.average.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">
+                ({stat.count} review{stat.count !== 1 ? "s" : ""})
+              </span>
+            </div>
+          )}
           <div className="flex gap-2 mt-3">
             {product.colors.slice(0, 4).map((color) => (
               <span key={color} className="text-xs text-muted-foreground">
