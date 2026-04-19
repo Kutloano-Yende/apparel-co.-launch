@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Star } from "lucide-react";
 import { Product, formatPrice } from "@/lib/products";
+import { useReviewStats } from "@/hooks/useReviewStats";
 
 interface ProductCardProps {
   product: Product;
@@ -8,6 +10,8 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+  const { data: stats } = useReviewStats();
+  const stat = stats?.[product.id];
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
