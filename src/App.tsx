@@ -17,6 +17,12 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import AdminPage from "@/pages/AdminPage";
 import TrackOrderPage from "@/pages/TrackOrderPage";
+import ContactPage from "@/pages/ContactPage";
+import ShippingPage from "@/pages/ShippingPage";
+import ReturnsPage from "@/pages/ReturnsPage";
+import SizeGuidePage from "@/pages/SizeGuidePage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +46,12 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
               <Route path="/track-order" element={<TrackOrderPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/shipping" element={<ShippingPage />} />
+              <Route path="/returns" element={<ReturnsPage />} />
+              <Route path="/size-guide" element={<SizeGuidePage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
