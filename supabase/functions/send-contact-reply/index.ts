@@ -48,26 +48,73 @@ serve(async (req) => {
       });
     }
 
-    const html = buildHtml(escapeHtml(name), escapeHtml(subject || ""), escapeHtml(message));
+    const safeName = escapeHtml(name);
+    const safeSubject = escapeHtml(subject || "");
+    const safeMessage = escapeHtml(message);
+    const safeEmail = escapeHtml(email);
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const customerHtml = buildHtml(safeName, safeSubject, safeMessage);
+
+    const adminHtml = `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#fff;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <h1 style="font-size:20px;font-weight:700;letter-spacing:0.1em;margin:0;">APPAREL <span style="font-weight:300;">Co.</span> — New Contact Message</h1>
+    </div>
+    <div style="background:#fafafa;padding:24px;margin-bottom:16px;">
+      <p style="font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px 0;">From</p>
+      <p style="font-size:15px;color:#111;margin:0 0 4px 0;"><strong>${safeName}</strong></p>
+      <p style="font-size:14px;color:#555;margin:0;"><a href="mailto:${safeEmail}" style="color:#555;">${safeEmail}</a></p>
+    </div>
+    ${safeSubject ? `<div style="margin-bottom:16px;"><p style="font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px 0;">Subject</p><p style="font-size:14px;color:#333;margin:0;">${safeSubject}</p></div>` : ""}
+    <div style="margin-bottom:24px;">
+      <p style="font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0;">Message</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;margin:0;">${safeMessage}</p>
+    </div>
+    <div style="text-align:center;padding-top:20px;border-top:1px solid #eee;">
+      <p style="color:#999;font-size:12px;">Reply directly to this email to respond to ${safeName}.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const sendEmail = (payload: Record<string, unknown>) =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+    const [customerRes, adminRes] = await Promise.all([
+      sendEmail({
         from: "APPAREL Co. <onboarding@resend.dev>",
         to: [email],
         subject: "We received your message — APPAREL Co.",
-        html,
+        html: customerHtml,
       }),
-    });
+      sendEmail({
+        from: "APPAREL Co. <onboarding@resend.dev>",
+        to: ["hello@apparelco.co.za"],
+        reply_to: email,
+        subject: `New contact message from ${name}${subject ? ` — ${subject}` : ""}`,
+        html: adminHtml,
+      }),
+    ]);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(`Resend error [${res.status}]: ${JSON.stringify(data)}`);
+    const customerData = await customerRes.json();
+    const adminData = await adminRes.json();
+    if (!customerRes.ok) console.error("Customer email failed:", customerData);
+    if (!adminRes.ok) console.error("Admin email failed:", adminData);
+    if (!customerRes.ok && !adminRes.ok) {
+      throw new Error(`Both emails failed. Customer: ${JSON.stringify(customerData)}, Admin: ${JSON.stringify(adminData)}`);
+    }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    return new Response(JSON.stringify({ success: true, customer: customerData, admin: adminData }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
