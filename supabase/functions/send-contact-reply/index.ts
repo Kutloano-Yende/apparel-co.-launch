@@ -92,13 +92,13 @@ serve(async (req) => {
 
     const [customerRes, adminRes] = await Promise.all([
       sendEmail({
-        from: "APPAREL Co. <noreply@apparelco.co.za>",
+        from: "APPAREL Co. <noreply@mail.apparelco.co.za>",
         to: [email],
         subject: "We received your message — APPAREL Co.",
         html: customerHtml,
       }),
       sendEmail({
-        from: "APPAREL Co. <noreply@apparelco.co.za>",
+        from: "APPAREL Co. <noreply@mail.apparelco.co.za>",
         to: ["hello@apparelco.co.za"],
         reply_to: email,
         subject: `New contact message from ${name}${subject ? ` — ${subject}` : ""}`,
