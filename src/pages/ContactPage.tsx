@@ -31,12 +31,22 @@ const ContactPage = () => {
       subject: parsed.data.subject || "",
       message: parsed.data.message,
     });
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast({ title: "Could not send message", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Message sent", description: "We'll get back to you within 1-2 business days." });
+    // Fire-and-forget confirmation email (don't block UX on email delivery)
+    supabase.functions.invoke("send-contact-reply", {
+      body: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        subject: parsed.data.subject || "",
+        message: parsed.data.message,
+      },
+    }).catch((err) => console.error("Confirmation email failed:", err));
+    setSubmitting(false);
+    toast({ title: "Message sent", description: "Check your inbox for a confirmation. We'll reply within 1-2 business days." });
     setForm({ name: "", email: "", subject: "", message: "" });
   };
 
