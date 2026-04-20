@@ -8,6 +8,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { formatPrice } from "@/lib/products";
 import { useQueryClient } from "@tanstack/react-query";
 import OrderManagement from "@/components/admin/OrderManagement";
+import MessagesManagement from "@/components/admin/MessagesManagement";
 
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -32,7 +33,7 @@ const AdminPage = () => {
   const queryClient = useQueryClient();
   const { data: products, isLoading: productsLoading } = useProducts();
 
-  const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "messages">("products");
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -240,10 +241,20 @@ const AdminPage = () => {
           >
             Orders
           </button>
+          <button
+            onClick={() => setActiveTab("messages")}
+            className={`font-display text-sm tracking-widest uppercase px-6 py-3 border-b-2 transition-colors ${
+              activeTab === "messages" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Messages
+          </button>
         </div>
 
         {activeTab === "orders" ? (
           <OrderManagement />
+        ) : activeTab === "messages" ? (
+          <MessagesManagement />
         ) : (
         <>
         <div className="flex items-center justify-between mb-10">
