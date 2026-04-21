@@ -1,7 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2 } from "lucide-react";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+type ContactMessage = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  created_at: string;
+};
 
 const fetchContactMessages = async () => {
   const { data, error } = await supabase
@@ -28,6 +48,10 @@ const formatDate = (dateStr: string) =>
 
 const MessagesManagement = () => {
   const [view, setView] = useState<"messages" | "subscribers">("messages");
+  const [replyTo, setReplyTo] = useState<ContactMessage | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["admin-contact-messages"],
     queryFn: fetchContactMessages,
@@ -36,6 +60,53 @@ const MessagesManagement = () => {
     queryKey: ["admin-newsletter-subscribers"],
     queryFn: fetchSubscribers,
   });
+
+  const openReply = (msg: ContactMessage) => {
+    setReplyTo(msg);
+    setReplyText("");
+  };
+
+  const closeReply = () => {
+    if (sending) return;
+    setReplyTo(null);
+    setReplyText("");
+  };
+
+  const sendReply = async () => {
+    if (!replyTo) return;
+    const trimmed = replyText.trim();
+    if (trimmed.length < 1) {
+      toast.error("Reply cannot be empty");
+      return;
+    }
+    if (trimmed.length > 5000) {
+      toast.error("Reply must be 5000 characters or fewer");
+      return;
+    }
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-contact-reply", {
+        body: {
+          mode: "admin-reply",
+          name: replyTo.name,
+          email: replyTo.email,
+          subject: replyTo.subject,
+          replyMessage: trimmed,
+          originalMessage: replyTo.message,
+        },
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.error || "Send failed");
+      toast.success(`Reply sent to ${replyTo.email}`);
+      setReplyTo(null);
+      setReplyText("");
+    } catch (err) {
+      console.error("Send reply failed:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to send reply");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -94,6 +165,15 @@ const MessagesManagement = () => {
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-3">
                   {msg.message}
                 </p>
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => openReply(msg as ContactMessage)}
+                    className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors flex items-center gap-1.5"
+                  >
+                    <Reply size={12} />
+                    Reply
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -124,6 +204,62 @@ const MessagesManagement = () => {
           )}
         </div>
       )}
+
+      {/* Reply dialog */}
+      <Dialog open={!!replyTo} onOpenChange={(open) => !open && closeReply()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display tracking-wide">Reply to {replyTo?.name}</DialogTitle>
+            <DialogDescription className="break-all">
+              To: <span className="text-foreground">{replyTo?.email}</span>
+              {replyTo?.subject && (
+                <>
+                  <br />
+                  Subject: <span className="text-foreground">Re: {replyTo.subject}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {replyTo?.message && (
+            <div className="bg-muted/40 p-3 text-xs text-muted-foreground whitespace-pre-wrap border-l-2 border-border max-h-32 overflow-y-auto">
+              {replyTo.message}
+            </div>
+          )}
+
+          <Textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Write your reply..."
+            rows={8}
+            disabled={sending}
+            className="resize-none"
+            maxLength={5000}
+          />
+          <p className="text-[11px] text-muted-foreground text-right">
+            {replyText.length}/5000
+          </p>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReply} disabled={sending}>
+              Cancel
+            </Button>
+            <Button onClick={sendReply} disabled={sending || replyText.trim().length === 0}>
+              {sending ? (
+                <>
+                  <Loader2 size={14} className="mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Reply size={14} className="mr-2" />
+                  Send Reply
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
