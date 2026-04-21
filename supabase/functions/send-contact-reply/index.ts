@@ -31,6 +31,30 @@ const buildHtml = (name: string, subject: string, message: string) => `
 </body>
 </html>`;
 
+const buildAdminReplyHtml = (name: string, subject: string, replyMessage: string, originalMessage: string) => `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#fff;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="font-size:24px;font-weight:700;letter-spacing:0.1em;margin:0;">APPAREL <span style="font-weight:300;">Co.</span></h1>
+    </div>
+    <div style="padding:8px 0 24px 0;">
+      <p style="font-size:15px;color:#111;margin:0 0 16px 0;">Hi ${name},</p>
+      <p style="font-size:15px;color:#333;line-height:1.7;white-space:pre-wrap;margin:0;">${replyMessage}</p>
+    </div>
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid #eee;">
+      <p style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px 0;">In reply to your message</p>
+      ${subject ? `<p style="font-size:13px;color:#666;margin:0 0 8px 0;"><strong>Subject:</strong> ${subject}</p>` : ""}
+      <p style="font-size:13px;color:#888;line-height:1.6;white-space:pre-wrap;margin:0;font-style:italic;">${originalMessage}</p>
+    </div>
+    <div style="text-align:center;padding-top:24px;margin-top:24px;border-top:1px solid #eee;">
+      <p style="color:#999;font-size:12px;">APPAREL Co. · Midrand, South Africa</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 serve(async (req) => {
@@ -40,7 +64,67 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
 
-    const { name, email, subject, message } = await req.json();
+    const body = await req.json();
+    const mode: string = body.mode || "acknowledgement";
+
+    const sendEmail = (payload: Record<string, unknown>) =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+    // ---------- ADMIN REPLY MODE ----------
+    if (mode === "admin-reply") {
+      const { name, email, subject, replyMessage, originalMessage } = body;
+      if (!name || !email || !replyMessage) {
+        return new Response(JSON.stringify({ error: "Missing required fields (name, email, replyMessage)" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (typeof replyMessage !== "string" || replyMessage.length < 1 || replyMessage.length > 5000) {
+        return new Response(JSON.stringify({ error: "replyMessage must be 1-5000 characters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const html = buildAdminReplyHtml(
+        escapeHtml(name),
+        escapeHtml(subject || ""),
+        escapeHtml(replyMessage),
+        escapeHtml(originalMessage || ""),
+      );
+
+      const replySubject = subject ? `Re: ${subject}` : "Re: Your message to APPAREL Co.";
+
+      const res = await sendEmail({
+        from: "APPAREL Co. <noreply@mail.apparelco.co.za>",
+        to: [email],
+        reply_to: "hello@apparelco.co.za",
+        subject: replySubject,
+        html,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Admin reply email failed:", data);
+        return new Response(JSON.stringify({ success: false, error: data }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ success: true, data }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ---------- ACKNOWLEDGEMENT MODE (existing behaviour) ----------
+    const { name, email, subject, message } = body;
     if (!name || !email || !message) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
@@ -79,16 +163,6 @@ serve(async (req) => {
   </div>
 </body>
 </html>`;
-
-    const sendEmail = (payload: Record<string, unknown>) =>
-      fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
 
     const [customerRes, adminRes] = await Promise.all([
       sendEmail({
