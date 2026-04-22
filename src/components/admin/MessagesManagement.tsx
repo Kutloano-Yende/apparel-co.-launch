@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   Dialog,
@@ -71,6 +71,7 @@ const MessagesManagement = () => {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"messages" | "subscribers">("messages");
   const [filter, setFilter] = useState<"all" | MessageStatus>("all");
+  const [search, setSearch] = useState("");
   const [replyTo, setReplyTo] = useState<ContactMessage | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
@@ -93,9 +94,17 @@ const MessagesManagement = () => {
 
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
-    if (filter === "all") return messages;
-    return messages.filter((m) => m.status === filter);
-  }, [messages, filter]);
+    const q = search.trim().toLowerCase();
+    return messages.filter((m) => {
+      if (filter !== "all" && m.status !== filter) return false;
+      if (!q) return true;
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        (m.subject || "").toLowerCase().includes(q)
+      );
+    });
+  }, [messages, filter, search]);
 
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
@@ -207,6 +216,28 @@ const MessagesManagement = () => {
                 {f.label} ({counts[f.value]})
               </button>
             ))}
+          </div>
+
+          {/* Search input */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or subject..."
+              className="w-full pl-9 pr-9 py-2 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           <div className="space-y-3">
