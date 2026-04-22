@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar, Reply, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen } from "lucide-react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+type MessageStatus = "unread" | "read" | "replied";
+
 type ContactMessage = {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ type ContactMessage = {
   subject: string;
   message: string;
   created_at: string;
+  status: MessageStatus;
 };
 
 const fetchContactMessages = async () => {
@@ -29,7 +32,7 @@ const fetchContactMessages = async () => {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data || []) as ContactMessage[];
 };
 
 const fetchSubscribers = async () => {
@@ -46,11 +49,32 @@ const formatDate = (dateStr: string) =>
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+const STATUS_FILTERS: { value: "all" | MessageStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "unread", label: "Unread" },
+  { value: "read", label: "Read" },
+  { value: "replied", label: "Replied" },
+];
+
+const statusBadgeClass = (status: MessageStatus) => {
+  switch (status) {
+    case "unread":
+      return "bg-foreground text-background";
+    case "read":
+      return "bg-secondary text-secondary-foreground";
+    case "replied":
+      return "bg-transparent text-foreground border border-foreground";
+  }
+};
+
 const MessagesManagement = () => {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<"messages" | "subscribers">("messages");
+  const [filter, setFilter] = useState<"all" | MessageStatus>("all");
   const [replyTo, setReplyTo] = useState<ContactMessage | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["admin-contact-messages"],
@@ -61,9 +85,40 @@ const MessagesManagement = () => {
     queryFn: fetchSubscribers,
   });
 
+  const counts = useMemo(() => {
+    const c = { all: messages?.length ?? 0, unread: 0, read: 0, replied: 0 };
+    messages?.forEach((m) => { c[m.status] = (c[m.status] ?? 0) + 1; });
+    return c;
+  }, [messages]);
+
+  const filteredMessages = useMemo(() => {
+    if (!messages) return [];
+    if (filter === "all") return messages;
+    return messages.filter((m) => m.status === filter);
+  }, [messages, filter]);
+
+  const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
+    if (msg.status === status) return;
+    setUpdatingId(msg.id);
+    const { error } = await supabase
+      .from("contact_messages")
+      .update({ status })
+      .eq("id", msg.id);
+    setUpdatingId(null);
+    if (error) {
+      toast.error("Failed to update status");
+      return;
+    }
+    queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
+      old?.map((m) => (m.id === msg.id ? { ...m, status } : m)) ?? []
+    );
+    toast.success(`Marked as ${status}`);
+  };
+
   const openReply = (msg: ContactMessage) => {
     setReplyTo(msg);
     setReplyText("");
+    if (msg.status === "unread") void updateStatus(msg, "read");
   };
 
   const closeReply = () => {
@@ -98,6 +153,7 @@ const MessagesManagement = () => {
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.error || "Send failed");
       toast.success(`Reply sent to ${replyTo.email}`);
+      await updateStatus(replyTo, "replied");
       setReplyTo(null);
       setReplyText("");
     } catch (err) {
@@ -135,48 +191,103 @@ const MessagesManagement = () => {
       </div>
 
       {view === "messages" ? (
-        <div className="space-y-3">
-          {loadingMessages ? (
-            <p className="text-muted-foreground">Loading messages...</p>
-          ) : !messages?.length ? (
-            <p className="text-muted-foreground">No contact messages yet.</p>
-          ) : (
-            messages.map((msg) => (
-              <div key={msg.id} className="border border-border p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare size={16} className="text-muted-foreground" />
-                    <span className="font-display text-sm tracking-wide">{msg.name}</span>
+        <div className="space-y-4">
+          {/* Status filter */}
+          <div className="flex gap-2 flex-wrap">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border transition-colors ${
+                  filter === f.value
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border hover:border-foreground"
+                }`}
+              >
+                {f.label} ({counts[f.value]})
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {loadingMessages ? (
+              <p className="text-muted-foreground">Loading messages...</p>
+            ) : !filteredMessages.length ? (
+              <p className="text-muted-foreground">
+                {messages?.length ? `No ${filter} messages.` : "No contact messages yet."}
+              </p>
+            ) : (
+              filteredMessages.map((msg) => (
+                <div key={msg.id} className="border border-border p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <MessageSquare size={16} className="text-muted-foreground" />
+                      <span className="font-display text-sm tracking-wide">{msg.name}</span>
+                      <span
+                        className={`text-[10px] font-display tracking-widest uppercase px-2 py-0.5 ${statusBadgeClass(msg.status)}`}
+                      >
+                        {msg.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar size={12} />
+                      {formatDate(msg.created_at)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Calendar size={12} />
-                    {formatDate(msg.created_at)}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail size={14} className="text-muted-foreground flex-shrink-0" />
+                    <a href={`mailto:${msg.email}`} className="underline hover:text-foreground/70 truncate">
+                      {msg.email}
+                    </a>
+                  </div>
+                  {msg.subject && (
+                    <p className="text-sm font-display tracking-wide">{msg.subject}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-3">
+                    {msg.message}
+                  </p>
+                  <div className="flex justify-end gap-2 pt-1 flex-wrap">
+                    {msg.status === "unread" ? (
+                      <button
+                        disabled={updatingId === msg.id}
+                        onClick={() => updateStatus(msg, "read")}
+                        className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <MailOpen size={12} />
+                        Mark Read
+                      </button>
+                    ) : (
+                      <button
+                        disabled={updatingId === msg.id}
+                        onClick={() => updateStatus(msg, "unread")}
+                        className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Mail size={12} />
+                        Mark Unread
+                      </button>
+                    )}
+                    {msg.status !== "replied" && (
+                      <button
+                        disabled={updatingId === msg.id}
+                        onClick={() => updateStatus(msg, "replied")}
+                        className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Check size={12} />
+                        Mark Replied
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openReply(msg)}
+                      className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors flex items-center gap-1.5"
+                    >
+                      <Reply size={12} />
+                      Reply
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail size={14} className="text-muted-foreground flex-shrink-0" />
-                  <a href={`mailto:${msg.email}`} className="underline hover:text-foreground/70 truncate">
-                    {msg.email}
-                  </a>
-                </div>
-                {msg.subject && (
-                  <p className="text-sm font-display tracking-wide">{msg.subject}</p>
-                )}
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-3">
-                  {msg.message}
-                </p>
-                <div className="flex justify-end pt-1">
-                  <button
-                    onClick={() => openReply(msg as ContactMessage)}
-                    className="font-display text-xs tracking-widest uppercase px-3 py-2 border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors flex items-center gap-1.5"
-                  >
-                    <Reply size={12} />
-                    Reply
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       ) : (
         <div className="border border-border">
