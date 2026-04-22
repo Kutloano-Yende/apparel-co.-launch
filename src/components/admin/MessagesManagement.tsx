@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   Dialog,
