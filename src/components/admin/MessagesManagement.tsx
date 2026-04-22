@@ -71,6 +71,7 @@ const MessagesManagement = () => {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"messages" | "subscribers">("messages");
   const [filter, setFilter] = useState<"all" | MessageStatus>("all");
+  const [search, setSearch] = useState("");
   const [replyTo, setReplyTo] = useState<ContactMessage | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
@@ -93,9 +94,17 @@ const MessagesManagement = () => {
 
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
-    if (filter === "all") return messages;
-    return messages.filter((m) => m.status === filter);
-  }, [messages, filter]);
+    const q = search.trim().toLowerCase();
+    return messages.filter((m) => {
+      if (filter !== "all" && m.status !== filter) return false;
+      if (!q) return true;
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        (m.subject || "").toLowerCase().includes(q)
+      );
+    });
+  }, [messages, filter, search]);
 
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
