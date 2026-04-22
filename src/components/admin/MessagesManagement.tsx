@@ -218,6 +218,28 @@ const MessagesManagement = () => {
             ))}
           </div>
 
+          {/* Search input */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or subject..."
+              className="w-full pl-9 pr-9 py-2 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
           <div className="space-y-3">
             {loadingMessages ? (
               <p className="text-muted-foreground">Loading messages...</p>
