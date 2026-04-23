@@ -135,6 +135,15 @@ const MessagesManagement = () => {
     });
   }, [messages, filter, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredMessages.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageEnd = pageStart + pageSize;
+  const pagedMessages = useMemo(
+    () => filteredMessages.slice(pageStart, pageEnd),
+    [filteredMessages, pageStart, pageEnd]
+  );
+
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
     setUpdatingId(msg.id);
