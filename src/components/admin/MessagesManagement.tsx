@@ -92,6 +92,9 @@ const MessagesManagement = () => {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [page, setPage] = useState(1);
 
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["admin-contact-messages"],
@@ -105,6 +108,11 @@ const MessagesManagement = () => {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [view, filter]);
+
+  // Reset to first page whenever the filtered result set changes shape
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search, pageSize, view]);
 
   const counts = useMemo(() => {
     const c = { all: messages?.length ?? 0, unread: 0, read: 0, replied: 0 };
@@ -126,6 +134,15 @@ const MessagesManagement = () => {
       );
     });
   }, [messages, filter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMessages.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageEnd = pageStart + pageSize;
+  const pagedMessages = useMemo(
+    () => filteredMessages.slice(pageStart, pageEnd),
+    [filteredMessages, pageStart, pageEnd]
+  );
 
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
@@ -189,15 +206,15 @@ const MessagesManagement = () => {
   };
 
   const allVisibleSelected =
-    filteredMessages.length > 0 && filteredMessages.every((m) => selectedIds.has(m.id));
+    pagedMessages.length > 0 && pagedMessages.every((m) => selectedIds.has(m.id));
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) {
-        filteredMessages.forEach((m) => next.delete(m.id));
+        pagedMessages.forEach((m) => next.delete(m.id));
       } else {
-        filteredMessages.forEach((m) => next.add(m.id));
+        pagedMessages.forEach((m) => next.add(m.id));
       }
       return next;
     });
@@ -326,11 +343,11 @@ const MessagesManagement = () => {
                 <Checkbox
                   checked={allVisibleSelected}
                   onCheckedChange={toggleSelectAllVisible}
-                  aria-label="Select all visible messages"
+                  aria-label="Select all messages on this page"
                 />
                 {selectedIds.size > 0
                   ? `${selectedIds.size} selected`
-                  : `Select all (${filteredMessages.length})`}
+                  : `Select page (${pagedMessages.length})`}
               </label>
               {selectedIds.size > 0 && (
                 <div className="flex gap-2 flex-wrap">
@@ -375,7 +392,7 @@ const MessagesManagement = () => {
                 {messages?.length ? `No ${filter} messages.` : "No contact messages yet."}
               </p>
             ) : (
-              filteredMessages.map((msg) => (
+              pagedMessages.map((msg) => (
                 <div key={msg.id} className="border border-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -460,6 +477,49 @@ const MessagesManagement = () => {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {filteredMessages.length > 0 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-display tracking-widest uppercase">
+                <span>
+                  {pageStart + 1}–{Math.min(pageEnd, filteredMessages.length)} of {filteredMessages.length}
+                </span>
+                <span className="opacity-50">•</span>
+                <label className="flex items-center gap-2">
+                  Per page
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="bg-background border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <span className="text-xs font-display tracking-widest uppercase text-muted-foreground">
+                  Page {currentPage} / {totalPages}
+                </span>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="border border-border">
