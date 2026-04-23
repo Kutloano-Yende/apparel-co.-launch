@@ -21,6 +21,7 @@ export type Database = {
           id: string
           message: string
           name: string
+          replied_at: string | null
           status: string
           subject: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           message: string
           name: string
+          replied_at?: string | null
           status?: string
           subject?: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           id?: string
           message?: string
           name?: string
+          replied_at?: string | null
           status?: string
           subject?: string
         }

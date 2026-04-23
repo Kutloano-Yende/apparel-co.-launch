@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X, Clock } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,6 +26,7 @@ type ContactMessage = {
   message: string;
   created_at: string;
   status: MessageStatus;
+  replied_at: string | null;
 };
 
 const fetchContactMessages = async () => {
@@ -129,9 +130,12 @@ const MessagesManagement = () => {
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
     setUpdatingId(msg.id);
+    const nowIso = new Date().toISOString();
+    const patch: { status: MessageStatus; replied_at?: string | null } = { status };
+    if (status === "replied") patch.replied_at = nowIso;
     const { error } = await supabase
       .from("contact_messages")
-      .update({ status })
+      .update(patch)
       .eq("id", msg.id);
     setUpdatingId(null);
     if (error) {
@@ -139,7 +143,11 @@ const MessagesManagement = () => {
       return;
     }
     queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
-      old?.map((m) => (m.id === msg.id ? { ...m, status } : m)) ?? []
+      old?.map((m) =>
+        m.id === msg.id
+          ? { ...m, status, replied_at: status === "replied" ? nowIso : m.replied_at }
+          : m
+      ) ?? []
     );
     toast.success(`Marked as ${status}`);
   };
@@ -148,9 +156,12 @@ const MessagesManagement = () => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
     setBulkUpdating(true);
+    const nowIso = new Date().toISOString();
+    const patch: { status: MessageStatus; replied_at?: string | null } = { status };
+    if (status === "replied") patch.replied_at = nowIso;
     const { error } = await supabase
       .from("contact_messages")
-      .update({ status })
+      .update(patch)
       .in("id", ids);
     setBulkUpdating(false);
     if (error) {
@@ -158,7 +169,11 @@ const MessagesManagement = () => {
       return;
     }
     queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
-      old?.map((m) => (selectedIds.has(m.id) ? { ...m, status } : m)) ?? []
+      old?.map((m) =>
+        selectedIds.has(m.id)
+          ? { ...m, status, replied_at: status === "replied" ? nowIso : m.replied_at }
+          : m
+      ) ?? []
     );
     toast.success(`${ids.length} message${ids.length === 1 ? "" : "s"} marked as ${status}`);
     setSelectedIds(new Set());
@@ -376,6 +391,15 @@ const MessagesManagement = () => {
                       >
                         {msg.status}
                       </span>
+                      {msg.status === "replied" && msg.replied_at && (
+                        <span
+                          className="text-[10px] font-display tracking-widest uppercase px-2 py-0.5 border border-border text-muted-foreground inline-flex items-center gap-1"
+                          title={`Last replied: ${new Date(msg.replied_at).toLocaleString("en-ZA")}`}
+                        >
+                          <Clock size={10} />
+                          {formatDate(msg.replied_at)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Calendar size={12} />
