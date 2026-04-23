@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,8 @@ const MessagesManagement = () => {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["admin-contact-messages"],
@@ -85,6 +88,10 @@ const MessagesManagement = () => {
     queryKey: ["admin-newsletter-subscribers"],
     queryFn: fetchSubscribers,
   });
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [view, filter]);
 
   const counts = useMemo(() => {
     const c = { all: messages?.length ?? 0, unread: 0, read: 0, replied: 0 };
@@ -122,6 +129,50 @@ const MessagesManagement = () => {
       old?.map((m) => (m.id === msg.id ? { ...m, status } : m)) ?? []
     );
     toast.success(`Marked as ${status}`);
+  };
+
+  const bulkUpdateStatus = async (status: MessageStatus) => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBulkUpdating(true);
+    const { error } = await supabase
+      .from("contact_messages")
+      .update({ status })
+      .in("id", ids);
+    setBulkUpdating(false);
+    if (error) {
+      toast.error("Failed to update messages");
+      return;
+    }
+    queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
+      old?.map((m) => (selectedIds.has(m.id) ? { ...m, status } : m)) ?? []
+    );
+    toast.success(`${ids.length} message${ids.length === 1 ? "" : "s"} marked as ${status}`);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    filteredMessages.length > 0 && filteredMessages.every((m) => selectedIds.has(m.id));
+
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        filteredMessages.forEach((m) => next.delete(m.id));
+      } else {
+        filteredMessages.forEach((m) => next.add(m.id));
+      }
+      return next;
+    });
   };
 
   const openReply = (msg: ContactMessage) => {
@@ -240,6 +291,54 @@ const MessagesManagement = () => {
             )}
           </div>
 
+          {/* Bulk actions bar */}
+          {filteredMessages.length > 0 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap border border-border bg-muted/30 px-3 py-2">
+              <label className="flex items-center gap-2 text-xs font-display tracking-widest uppercase cursor-pointer">
+                <Checkbox
+                  checked={allVisibleSelected}
+                  onCheckedChange={toggleSelectAllVisible}
+                  aria-label="Select all visible messages"
+                />
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selected`
+                  : `Select all (${filteredMessages.length})`}
+              </label>
+              {selectedIds.size > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("unread")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Mail size={12} /> Mark Unread
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("read")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <MailOpen size={12} /> Mark Read
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("replied")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark Replied
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => setSelectedIds(new Set())}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <X size={12} /> Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3">
             {loadingMessages ? (
               <p className="text-muted-foreground">Loading messages...</p>
@@ -252,6 +351,11 @@ const MessagesManagement = () => {
                 <div key={msg.id} className="border border-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <Checkbox
+                        checked={selectedIds.has(msg.id)}
+                        onCheckedChange={() => toggleSelect(msg.id)}
+                        aria-label={`Select message from ${msg.name}`}
+                      />
                       <MessageSquare size={16} className="text-muted-foreground" />
                       <span className="font-display text-sm tracking-wide">{msg.name}</span>
                       <span
