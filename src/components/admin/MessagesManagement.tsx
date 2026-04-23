@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Reply, Loader2, Check, MailOpen, Search, X, Clock } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -130,9 +130,12 @@ const MessagesManagement = () => {
   const updateStatus = async (msg: ContactMessage, status: MessageStatus) => {
     if (msg.status === status) return;
     setUpdatingId(msg.id);
+    const nowIso = new Date().toISOString();
+    const patch: { status: MessageStatus; replied_at?: string | null } = { status };
+    if (status === "replied") patch.replied_at = nowIso;
     const { error } = await supabase
       .from("contact_messages")
-      .update({ status })
+      .update(patch)
       .eq("id", msg.id);
     setUpdatingId(null);
     if (error) {
@@ -140,7 +143,11 @@ const MessagesManagement = () => {
       return;
     }
     queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
-      old?.map((m) => (m.id === msg.id ? { ...m, status } : m)) ?? []
+      old?.map((m) =>
+        m.id === msg.id
+          ? { ...m, status, replied_at: status === "replied" ? nowIso : m.replied_at }
+          : m
+      ) ?? []
     );
     toast.success(`Marked as ${status}`);
   };
@@ -149,9 +156,12 @@ const MessagesManagement = () => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
     setBulkUpdating(true);
+    const nowIso = new Date().toISOString();
+    const patch: { status: MessageStatus; replied_at?: string | null } = { status };
+    if (status === "replied") patch.replied_at = nowIso;
     const { error } = await supabase
       .from("contact_messages")
-      .update({ status })
+      .update(patch)
       .in("id", ids);
     setBulkUpdating(false);
     if (error) {
