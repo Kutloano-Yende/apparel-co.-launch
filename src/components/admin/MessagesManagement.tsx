@@ -127,6 +127,50 @@ const MessagesManagement = () => {
     toast.success(`Marked as ${status}`);
   };
 
+  const bulkUpdateStatus = async (status: MessageStatus) => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBulkUpdating(true);
+    const { error } = await supabase
+      .from("contact_messages")
+      .update({ status })
+      .in("id", ids);
+    setBulkUpdating(false);
+    if (error) {
+      toast.error("Failed to update messages");
+      return;
+    }
+    queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
+      old?.map((m) => (selectedIds.has(m.id) ? { ...m, status } : m)) ?? []
+    );
+    toast.success(`${ids.length} message${ids.length === 1 ? "" : "s"} marked as ${status}`);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    filteredMessages.length > 0 && filteredMessages.every((m) => selectedIds.has(m.id));
+
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        filteredMessages.forEach((m) => next.delete(m.id));
+      } else {
+        filteredMessages.forEach((m) => next.add(m.id));
+      }
+      return next;
+    });
+  };
+
   const openReply = (msg: ContactMessage) => {
     setReplyTo(msg);
     setReplyText("");
