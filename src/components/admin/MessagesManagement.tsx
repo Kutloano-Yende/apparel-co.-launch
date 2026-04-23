@@ -26,6 +26,7 @@ type ContactMessage = {
   message: string;
   created_at: string;
   status: MessageStatus;
+  replied_at: string | null;
 };
 
 const fetchContactMessages = async () => {
