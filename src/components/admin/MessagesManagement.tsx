@@ -391,6 +391,15 @@ const MessagesManagement = () => {
                       >
                         {msg.status}
                       </span>
+                      {msg.status === "replied" && msg.replied_at && (
+                        <span
+                          className="text-[10px] font-display tracking-widest uppercase px-2 py-0.5 border border-border text-muted-foreground inline-flex items-center gap-1"
+                          title={`Last replied: ${new Date(msg.replied_at).toLocaleString("en-ZA")}`}
+                        >
+                          <Clock size={10} />
+                          {formatDate(msg.replied_at)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Calendar size={12} />
