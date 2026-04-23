@@ -120,7 +120,8 @@ const MessagesManagement = () => {
       return (
         m.name.toLowerCase().includes(q) ||
         m.email.toLowerCase().includes(q) ||
-        (m.subject || "").toLowerCase().includes(q)
+        (m.subject || "").toLowerCase().includes(q) ||
+        m.message.toLowerCase().includes(q)
       );
     });
   }, [messages, filter, search]);
@@ -288,7 +289,7 @@ const MessagesManagement = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, or subject..."
+              placeholder="Search by name, email, subject, or message..."
               className="w-full pl-9 pr-9 py-2 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
             />
             {search && (
