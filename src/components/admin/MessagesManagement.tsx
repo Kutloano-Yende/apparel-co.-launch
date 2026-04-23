@@ -92,6 +92,9 @@ const MessagesManagement = () => {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [page, setPage] = useState(1);
 
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["admin-contact-messages"],
@@ -105,6 +108,11 @@ const MessagesManagement = () => {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [view, filter]);
+
+  // Reset to first page whenever the filtered result set changes shape
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search, pageSize, view]);
 
   const counts = useMemo(() => {
     const c = { all: messages?.length ?? 0, unread: 0, read: 0, replied: 0 };
