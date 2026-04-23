@@ -287,6 +287,54 @@ const MessagesManagement = () => {
             )}
           </div>
 
+          {/* Bulk actions bar */}
+          {filteredMessages.length > 0 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap border border-border bg-muted/30 px-3 py-2">
+              <label className="flex items-center gap-2 text-xs font-display tracking-widest uppercase cursor-pointer">
+                <Checkbox
+                  checked={allVisibleSelected}
+                  onCheckedChange={toggleSelectAllVisible}
+                  aria-label="Select all visible messages"
+                />
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selected`
+                  : `Select all (${filteredMessages.length})`}
+              </label>
+              {selectedIds.size > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("unread")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Mail size={12} /> Mark Unread
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("read")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <MailOpen size={12} /> Mark Read
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => bulkUpdateStatus("replied")}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Check size={12} /> Mark Replied
+                  </button>
+                  <button
+                    disabled={bulkUpdating}
+                    onClick={() => setSelectedIds(new Set())}
+                    className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <X size={12} /> Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3">
             {loadingMessages ? (
               <p className="text-muted-foreground">Loading messages...</p>
@@ -299,6 +347,11 @@ const MessagesManagement = () => {
                 <div key={msg.id} className="border border-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <Checkbox
+                        checked={selectedIds.has(msg.id)}
+                        onCheckedChange={() => toggleSelect(msg.id)}
+                        aria-label={`Select message from ${msg.name}`}
+                      />
                       <MessageSquare size={16} className="text-muted-foreground" />
                       <span className="font-display text-sm tracking-wide">{msg.name}</span>
                       <span
