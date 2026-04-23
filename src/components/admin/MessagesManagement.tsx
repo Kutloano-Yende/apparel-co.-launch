@@ -206,15 +206,15 @@ const MessagesManagement = () => {
   };
 
   const allVisibleSelected =
-    filteredMessages.length > 0 && filteredMessages.every((m) => selectedIds.has(m.id));
+    pagedMessages.length > 0 && pagedMessages.every((m) => selectedIds.has(m.id));
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) {
-        filteredMessages.forEach((m) => next.delete(m.id));
+        pagedMessages.forEach((m) => next.delete(m.id));
       } else {
-        filteredMessages.forEach((m) => next.add(m.id));
+        pagedMessages.forEach((m) => next.add(m.id));
       }
       return next;
     });
@@ -343,11 +343,11 @@ const MessagesManagement = () => {
                 <Checkbox
                   checked={allVisibleSelected}
                   onCheckedChange={toggleSelectAllVisible}
-                  aria-label="Select all visible messages"
+                  aria-label="Select all messages on this page"
                 />
                 {selectedIds.size > 0
                   ? `${selectedIds.size} selected`
-                  : `Select all (${filteredMessages.length})`}
+                  : `Select page (${pagedMessages.length})`}
               </label>
               {selectedIds.size > 0 && (
                 <div className="flex gap-2 flex-wrap">
@@ -392,7 +392,7 @@ const MessagesManagement = () => {
                 {messages?.length ? `No ${filter} messages.` : "No contact messages yet."}
               </p>
             ) : (
-              filteredMessages.map((msg) => (
+              pagedMessages.map((msg) => (
                 <div key={msg.id} className="border border-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
