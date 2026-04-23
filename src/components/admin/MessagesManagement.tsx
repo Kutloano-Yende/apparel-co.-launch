@@ -120,7 +120,8 @@ const MessagesManagement = () => {
       return (
         m.name.toLowerCase().includes(q) ||
         m.email.toLowerCase().includes(q) ||
-        (m.subject || "").toLowerCase().includes(q)
+        (m.subject || "").toLowerCase().includes(q) ||
+        m.message.toLowerCase().includes(q)
       );
     });
   }, [messages, filter, search]);
