@@ -169,7 +169,11 @@ const MessagesManagement = () => {
       return;
     }
     queryClient.setQueryData<ContactMessage[]>(["admin-contact-messages"], (old) =>
-      old?.map((m) => (selectedIds.has(m.id) ? { ...m, status } : m)) ?? []
+      old?.map((m) =>
+        selectedIds.has(m.id)
+          ? { ...m, status, replied_at: status === "replied" ? nowIso : m.replied_at }
+          : m
+      ) ?? []
     );
     toast.success(`${ids.length} message${ids.length === 1 ? "" : "s"} marked as ${status}`);
     setSelectedIds(new Set());
