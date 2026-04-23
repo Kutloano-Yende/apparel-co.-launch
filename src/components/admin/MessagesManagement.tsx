@@ -477,6 +477,49 @@ const MessagesManagement = () => {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {filteredMessages.length > 0 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-display tracking-widest uppercase">
+                <span>
+                  {pageStart + 1}–{Math.min(pageEnd, filteredMessages.length)} of {filteredMessages.length}
+                </span>
+                <span className="opacity-50">•</span>
+                <label className="flex items-center gap-2">
+                  Per page
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="bg-background border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <span className="text-xs font-display tracking-widest uppercase text-muted-foreground">
+                  Page {currentPage} / {totalPages}
+                </span>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="font-display text-[11px] tracking-widest uppercase px-3 py-1.5 border border-border hover:border-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="border border-border">
