@@ -72,7 +72,18 @@ const statusBadgeClass = (status: MessageStatus) => {
 const MessagesManagement = () => {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"messages" | "subscribers">("messages");
-  const [filter, setFilter] = useState<"all" | MessageStatus>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_FILTERS = ["all", "unread", "read", "replied"] as const;
+  const urlFilter = searchParams.get("status");
+  const filter = (VALID_FILTERS.includes(urlFilter as typeof VALID_FILTERS[number])
+    ? urlFilter
+    : "all") as "all" | MessageStatus;
+  const setFilter = (next: "all" | MessageStatus) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("status");
+    else params.set("status", next);
+    setSearchParams(params, { replace: true });
+  };
   const [search, setSearch] = useState("");
   const [replyTo, setReplyTo] = useState<ContactMessage | null>(null);
   const [replyText, setReplyText] = useState("");
