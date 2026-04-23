@@ -89,6 +89,10 @@ const MessagesManagement = () => {
     queryFn: fetchSubscribers,
   });
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [view, filter]);
+
   const counts = useMemo(() => {
     const c = { all: messages?.length ?? 0, unread: 0, read: 0, replied: 0 };
     messages?.forEach((m) => { c[m.status] = (c[m.status] ?? 0) + 1; });
