@@ -12,6 +12,18 @@ function getMissingEnvVars(): string[] {
   return missing;
 }
 
+const AUTO_RETRY_INTERVAL_MS = 3000;
+const AUTO_RETRY_MAX_ATTEMPTS = 10; // ~30s of polling
+let autoRetryTimer: number | null = null;
+let autoRetryAttempts = 0;
+
+function stopAutoRetry() {
+  if (autoRetryTimer !== null) {
+    window.clearInterval(autoRetryTimer);
+    autoRetryTimer = null;
+  }
+}
+
 function renderConfigBanner(missing: string[]) {
   // Tear down any prior React root so we don't double-mount later.
   if (reactRoot) {
