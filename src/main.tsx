@@ -5,13 +5,6 @@ import "./index.css";
 const rootEl = document.getElementById("root")!;
 let reactRoot: Root | null = null;
 
-function getMissingEnvVars(): string[] {
-  const missing: string[] = [];
-  if (!import.meta.env.VITE_SUPABASE_URL) missing.push("VITE_SUPABASE_URL");
-  if (!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
-  return missing;
-}
-
 const AUTO_RETRY_INTERVAL_MS = 3000;
 const AUTO_RETRY_MAX_ATTEMPTS = 10; // ~30s of polling
 let autoRetryTimer: number | null = null;
@@ -24,8 +17,14 @@ function stopAutoRetry() {
   }
 }
 
+function getMissingEnvVars(): string[] {
+  const missing: string[] = [];
+  if (!import.meta.env.VITE_SUPABASE_URL) missing.push("VITE_SUPABASE_URL");
+  if (!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
+  return missing;
+}
+
 function renderConfigBanner(missing: string[]) {
-  // Tear down any prior React root so we don't double-mount later.
   if (reactRoot) {
     reactRoot.unmount();
     reactRoot = null;
@@ -48,11 +47,11 @@ function renderConfigBanner(missing: string[]) {
         <p style="margin:0 0 18px;color:#9a9aa1;font-size:13px;line-height:1.55;">
           If you're the site owner, open the project in Lovable and click <strong style="color:#f5f5f5;">Publish → Update</strong> to redeploy with the current configuration.
         </p>
-        <div style="display:flex;gap:10px;align-items:center;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <button id="startup-retry-btn" style="appearance:none;border:1px solid #3a3a3f;background:#f5f5f5;color:#0b0b0c;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer;transition:opacity 0.15s;">
             Retry
           </button>
-          <span id="startup-retry-status" style="color:#9a9aa1;font-size:12px;"></span>
+          <span id="startup-retry-status" style="color:#9a9aa1;font-size:12px;">Auto-checking every ${Math.round(AUTO_RETRY_INTERVAL_MS / 1000)}s…</span>
         </div>
       </div>
     </div>
@@ -61,29 +60,55 @@ function renderConfigBanner(missing: string[]) {
   const btn = document.getElementById("startup-retry-btn") as HTMLButtonElement | null;
   const status = document.getElementById("startup-retry-status");
 
-  btn?.addEventListener("click", () => {
-    if (!btn) return;
-    btn.disabled = true;
-    btn.style.opacity = "0.6";
-    btn.textContent = "Checking…";
-    if (status) status.textContent = "";
+  const attempt = (manual: boolean) => {
+    if (manual && btn) {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      btn.textContent = "Checking…";
+    }
+    if (manual && status) {
+      status.style.color = "#9a9aa1";
+      status.textContent = "Checking…";
+    }
 
-    // Brief delay so the user sees feedback even if the check is instant.
-    setTimeout(() => {
-      const stillMissing = getMissingEnvVars();
-      if (stillMissing.length === 0) {
-        bootstrap();
+    const stillMissing = getMissingEnvVars();
+    if (stillMissing.length === 0) {
+      stopAutoRetry();
+      bootstrap();
+      return;
+    }
+
+    if (!manual) autoRetryAttempts += 1;
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.textContent = "Retry";
+    }
+    if (status) {
+      if (autoRetryTimer !== null && autoRetryAttempts < AUTO_RETRY_MAX_ATTEMPTS) {
+        status.style.color = "#9a9aa1";
+        status.textContent = `Still missing — auto-retrying (${autoRetryAttempts}/${AUTO_RETRY_MAX_ATTEMPTS})…`;
       } else {
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.textContent = "Retry";
-        if (status) {
-          status.textContent = `Still missing: ${stillMissing.join(", ")}`;
-          status.style.color = "#fca5a5";
-        }
+        stopAutoRetry();
+        status.style.color = "#fca5a5";
+        status.textContent = `Still missing: ${stillMissing.join(", ")}. Click Retry to try again.`;
       }
-    }, 250);
-  });
+    }
+  };
+
+  btn?.addEventListener("click", () => attempt(true));
+
+  // Auto-retry loop: poll a few times then give up and let the user retry manually.
+  stopAutoRetry();
+  autoRetryAttempts = 0;
+  autoRetryTimer = window.setInterval(() => {
+    if (autoRetryAttempts >= AUTO_RETRY_MAX_ATTEMPTS) {
+      stopAutoRetry();
+      return;
+    }
+    attempt(false);
+  }, AUTO_RETRY_INTERVAL_MS);
 }
 
 function bootstrap() {
@@ -94,7 +119,7 @@ function bootstrap() {
     return;
   }
 
-  // Clear any banner markup before mounting React.
+  stopAutoRetry();
   rootEl.innerHTML = "";
   reactRoot = createRoot(rootEl);
   reactRoot.render(<App />);
