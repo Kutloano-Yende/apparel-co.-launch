@@ -167,6 +167,9 @@ function renderDiagnosticsHTML(): string {
             <button id="startup-refresh-env-btn" type="button" style="appearance:none;border:1px solid #3a3a3f;background:#1c1c20;color:#e5e5ea;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:opacity 0.15s;">
               Refresh env status
             </button>
+            <button id="startup-copy-diag-btn" type="button" style="appearance:none;border:1px solid #3a3a3f;background:#1c1c20;color:#e5e5ea;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:opacity 0.15s;">
+              Copy diagnostics
+            </button>
           </div>
         </div>
         ${rows}
