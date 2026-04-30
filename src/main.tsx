@@ -108,6 +108,8 @@ function getEnvVarStatuses(): EnvVarStatus[] {
   ];
 }
 
+let lastEnvCheckAt: Date | null = null;
+
 function renderDiagnosticsHTML(): string {
   const statuses = getEnvVarStatuses();
   const rows = statuses
@@ -147,14 +149,26 @@ function renderDiagnosticsHTML(): string {
     `;
   }
 
+  const lastCheckText = lastEnvCheckAt
+    ? `Last checked at ${lastEnvCheckAt.toLocaleTimeString()}`
+    : "Not checked yet";
+
   return `
-    <details id="startup-diagnostics" style="margin-top:16px;border:1px solid #232327;border-radius:8px;background:#0f0f11;">
-      <summary style="cursor:pointer;list-style:none;padding:10px 12px;font-size:12px;font-weight:600;color:#e5e5ea;display:flex;align-items:center;justify-content:space-between;">
+    <details id="startup-diagnostics" style="margin-top:16px;border:1px solid #232327;border-radius:8px;background:#0f0f11;" open>
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;font-size:12px;font-weight:600;color:#e5e5ea;display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span>Diagnostics</span>
         <span style="color:#9a9aa1;font-weight:400;">env vars · last attempt</span>
       </summary>
       <div style="border-top:1px solid #232327;">
-        <div style="padding:8px 10px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#6e6e76;">Environment variables</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px 4px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#6e6e76;">Environment variables</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="startup-env-checked-at" style="color:#6e6e76;font-size:11px;">${lastCheckText}</span>
+            <button id="startup-refresh-env-btn" type="button" style="appearance:none;border:1px solid #3a3a3f;background:#1c1c20;color:#e5e5ea;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:opacity 0.15s;">
+              Refresh env status
+            </button>
+          </div>
+        </div>
         ${rows}
         <div style="padding:8px 10px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#6e6e76;border-top:1px solid #232327;">Last retry attempt</div>
         ${lastAttempt}
@@ -163,9 +177,29 @@ function renderDiagnosticsHTML(): string {
   `;
 }
 
+function bindDiagnosticsHandlers() {
+  const btn = document.getElementById("startup-refresh-env-btn") as HTMLButtonElement | null;
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    btn.disabled = true;
+    btn.style.opacity = "0.6";
+    btn.textContent = "Refreshing…";
+    lastEnvCheckAt = new Date();
+    if (getMissingEnvVars().length === 0) {
+      stopAutoRetry();
+      bootstrap();
+      return;
+    }
+    refreshDiagnostics();
+  });
+}
+
 function refreshDiagnostics() {
   const host = document.getElementById("startup-diagnostics-host");
-  if (host) host.innerHTML = renderDiagnosticsHTML();
+  if (host) {
+    host.innerHTML = renderDiagnosticsHTML();
+    bindDiagnosticsHandlers();
+  }
 }
 
 function stopAutoRetry() {
@@ -221,6 +255,7 @@ function renderConfigBanner(missing: string[]) {
 
   const btn = document.getElementById("startup-retry-btn") as HTMLButtonElement | null;
   const status = document.getElementById("startup-retry-status");
+  bindDiagnosticsHandlers();
 
   const attempt = (manual: boolean) => {
     if (manual && btn) {
