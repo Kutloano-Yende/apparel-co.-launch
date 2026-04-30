@@ -167,6 +167,9 @@ function renderDiagnosticsHTML(): string {
             <button id="startup-refresh-env-btn" type="button" style="appearance:none;border:1px solid #3a3a3f;background:#1c1c20;color:#e5e5ea;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:opacity 0.15s;">
               Refresh env status
             </button>
+            <button id="startup-copy-diag-btn" type="button" style="appearance:none;border:1px solid #3a3a3f;background:#1c1c20;color:#e5e5ea;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:opacity 0.15s;">
+              Copy diagnostics
+            </button>
           </div>
         </div>
         ${rows}
@@ -177,21 +180,96 @@ function renderDiagnosticsHTML(): string {
   `;
 }
 
+function buildDiagnosticsText(): string {
+  const statuses = getEnvVarStatuses();
+  const lines: string[] = [];
+  lines.push("Lovable startup diagnostics");
+  lines.push(`Generated at: ${new Date().toISOString()}`);
+  lines.push(`Page URL: ${window.location.href}`);
+  lines.push(`User-Agent: ${navigator.userAgent}`);
+  lines.push("");
+  lines.push("Environment variables:");
+  for (const s of statuses) {
+    lines.push(`  - ${s.name}: ${s.present ? "present" : "missing"} | ${s.preview}`);
+  }
+  lines.push("");
+  lines.push("Last retry attempt:");
+  if (lastAttemptAt) {
+    lines.push(`  - at: ${lastAttemptAt.toISOString()}`);
+    lines.push(`  - kind: ${lastAttemptKind ?? "—"}`);
+    lines.push(`  - result: ${lastAttemptResult ?? "—"}`);
+    lines.push(`  - missing: ${lastAttemptMissing.length ? lastAttemptMissing.join(", ") : "none"}`);
+    if (lastAttemptKind === "auto") {
+      lines.push(`  - auto-retry attempts: ${autoRetryAttempts}/${AUTO_RETRY_MAX_ATTEMPTS}`);
+    }
+  } else {
+    lines.push("  (none yet)");
+  }
+  lines.push("");
+  lines.push(`Last env status check: ${lastEnvCheckAt ? lastEnvCheckAt.toISOString() : "(none)"}`);
+  return lines.join("\n");
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to legacy path
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 function bindDiagnosticsHandlers() {
   const btn = document.getElementById("startup-refresh-env-btn") as HTMLButtonElement | null;
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    btn.disabled = true;
-    btn.style.opacity = "0.6";
-    btn.textContent = "Refreshing…";
-    lastEnvCheckAt = new Date();
-    if (getMissingEnvVars().length === 0) {
-      stopAutoRetry();
-      bootstrap();
-      return;
-    }
-    refreshDiagnostics();
-  });
+  if (btn) {
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      btn.textContent = "Refreshing…";
+      lastEnvCheckAt = new Date();
+      if (getMissingEnvVars().length === 0) {
+        stopAutoRetry();
+        bootstrap();
+        return;
+      }
+      refreshDiagnostics();
+    });
+  }
+
+  const copyBtn = document.getElementById("startup-copy-diag-btn") as HTMLButtonElement | null;
+  if (copyBtn) {
+    copyBtn.addEventListener("click", async () => {
+      const original = copyBtn.textContent ?? "Copy diagnostics";
+      copyBtn.disabled = true;
+      copyBtn.style.opacity = "0.6";
+      copyBtn.textContent = "Copying…";
+      const ok = await copyToClipboard(buildDiagnosticsText());
+      copyBtn.textContent = ok ? "Copied ✓" : "Copy failed";
+      copyBtn.style.opacity = "1";
+      window.setTimeout(() => {
+        const fresh = document.getElementById("startup-copy-diag-btn") as HTMLButtonElement | null;
+        if (fresh) {
+          fresh.disabled = false;
+          fresh.textContent = original;
+        }
+      }, 1600);
+    });
+  }
 }
 
 function refreshDiagnostics() {
