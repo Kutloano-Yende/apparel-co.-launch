@@ -290,6 +290,7 @@ function bootstrap() {
   }
 
   stopAutoRetry();
+  clearPersistedDiagnostics();
   rootEl.innerHTML = "";
   reactRoot = createRoot(rootEl);
   reactRoot.render(<App />);
