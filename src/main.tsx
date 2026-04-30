@@ -14,6 +14,73 @@ let lastAttemptResult: "ok" | "missing" | null = null;
 let lastAttemptKind: "manual" | "auto" | null = null;
 let lastAttemptMissing: string[] = [];
 
+const DIAGNOSTICS_STORAGE_KEY = "startup-guard:diagnostics:v1";
+
+type PersistedDiagnostics = {
+  lastAttemptAt: string | null;
+  lastAttemptResult: "ok" | "missing" | null;
+  lastAttemptKind: "manual" | "auto" | null;
+  lastAttemptMissing: string[];
+  autoRetryAttempts: number;
+  savedAt: string;
+};
+
+function safeStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function persistDiagnostics() {
+  const storage = safeStorage();
+  if (!storage) return;
+  try {
+    const payload: PersistedDiagnostics = {
+      lastAttemptAt: lastAttemptAt ? lastAttemptAt.toISOString() : null,
+      lastAttemptResult,
+      lastAttemptKind,
+      lastAttemptMissing,
+      autoRetryAttempts,
+      savedAt: new Date().toISOString(),
+    };
+    storage.setItem(DIAGNOSTICS_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore quota / serialization errors
+  }
+}
+
+function restoreDiagnostics() {
+  const storage = safeStorage();
+  if (!storage) return;
+  try {
+    const raw = storage.getItem(DIAGNOSTICS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Partial<PersistedDiagnostics>;
+    if (parsed.lastAttemptAt) {
+      const d = new Date(parsed.lastAttemptAt);
+      lastAttemptAt = isNaN(d.getTime()) ? null : d;
+    }
+    lastAttemptResult = parsed.lastAttemptResult ?? null;
+    lastAttemptKind = parsed.lastAttemptKind ?? null;
+    lastAttemptMissing = Array.isArray(parsed.lastAttemptMissing) ? parsed.lastAttemptMissing : [];
+    autoRetryAttempts = typeof parsed.autoRetryAttempts === "number" ? parsed.autoRetryAttempts : 0;
+  } catch {
+    // ignore corrupt data
+  }
+}
+
+function clearPersistedDiagnostics() {
+  const storage = safeStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(DIAGNOSTICS_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 type EnvVarStatus = { name: string; present: boolean; preview: string };
 
 function getEnvVarStatuses(): EnvVarStatus[] {
@@ -121,6 +188,9 @@ function renderConfigBanner(missing: string[]) {
     reactRoot = null;
   }
 
+  // Restore prior diagnostics so the panel shows context from the previous load.
+  restoreDiagnostics();
+
   rootEl.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b0b0c;color:#f5f5f5;">
       <div style="max-width:560px;width:100%;border:1px solid #2a2a2d;border-radius:12px;padding:28px;background:#141416;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
@@ -171,6 +241,7 @@ function renderConfigBanner(missing: string[]) {
 
     if (stillMissing.length === 0) {
       stopAutoRetry();
+      persistDiagnostics();
       bootstrap();
       return;
     }
@@ -192,6 +263,7 @@ function renderConfigBanner(missing: string[]) {
         status.textContent = `Still missing: ${stillMissing.join(", ")}. Click Retry to try again.`;
       }
     }
+    persistDiagnostics();
     refreshDiagnostics();
   };
 
@@ -218,6 +290,7 @@ function bootstrap() {
   }
 
   stopAutoRetry();
+  clearPersistedDiagnostics();
   rootEl.innerHTML = "";
   reactRoot = createRoot(rootEl);
   reactRoot.render(<App />);
