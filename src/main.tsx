@@ -180,9 +180,6 @@ function renderDiagnosticsHTML(): string {
   `;
 }
 
-function bindDiagnosticsHandlers() {
-  const btn = document.getElementById("startup-refresh-env-btn") as HTMLButtonElement | null;
-  if (!btn) return;
 function buildDiagnosticsText(): string {
   const statuses = getEnvVarStatuses();
   const lines: string[] = [];
