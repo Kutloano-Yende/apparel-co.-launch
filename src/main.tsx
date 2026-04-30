@@ -188,6 +188,9 @@ function renderConfigBanner(missing: string[]) {
     reactRoot = null;
   }
 
+  // Restore prior diagnostics so the panel shows context from the previous load.
+  restoreDiagnostics();
+
   rootEl.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b0b0c;color:#f5f5f5;">
       <div style="max-width:560px;width:100%;border:1px solid #2a2a2d;border-radius:12px;padding:28px;background:#141416;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
