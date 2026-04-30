@@ -164,6 +164,11 @@ function renderConfigBanner(missing: string[]) {
     }
 
     const stillMissing = getMissingEnvVars();
+    lastAttemptAt = new Date();
+    lastAttemptKind = manual ? "manual" : "auto";
+    lastAttemptMissing = stillMissing;
+    lastAttemptResult = stillMissing.length === 0 ? "ok" : "missing";
+
     if (stillMissing.length === 0) {
       stopAutoRetry();
       bootstrap();
@@ -187,6 +192,7 @@ function renderConfigBanner(missing: string[]) {
         status.textContent = `Still missing: ${stillMissing.join(", ")}. Click Retry to try again.`;
       }
     }
+    refreshDiagnostics();
   };
 
   btn?.addEventListener("click", () => attempt(true));
