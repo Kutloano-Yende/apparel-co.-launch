@@ -144,6 +144,7 @@ function renderConfigBanner(missing: string[]) {
           </button>
           <span id="startup-retry-status" style="color:#9a9aa1;font-size:12px;">Auto-checking every ${Math.round(AUTO_RETRY_INTERVAL_MS / 1000)}s…</span>
         </div>
+        <div id="startup-diagnostics-host">${renderDiagnosticsHTML()}</div>
       </div>
     </div>
   `;
