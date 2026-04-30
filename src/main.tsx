@@ -255,6 +255,7 @@ function renderConfigBanner(missing: string[]) {
 
   const btn = document.getElementById("startup-retry-btn") as HTMLButtonElement | null;
   const status = document.getElementById("startup-retry-status");
+  bindDiagnosticsHandlers();
 
   const attempt = (manual: boolean) => {
     if (manual && btn) {
