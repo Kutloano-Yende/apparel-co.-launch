@@ -108,6 +108,8 @@ function getEnvVarStatuses(): EnvVarStatus[] {
   ];
 }
 
+let lastEnvCheckAt: Date | null = null;
+
 function renderDiagnosticsHTML(): string {
   const statuses = getEnvVarStatuses();
   const rows = statuses
