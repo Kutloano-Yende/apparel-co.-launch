@@ -238,6 +238,7 @@ function renderConfigBanner(missing: string[]) {
 
     if (stillMissing.length === 0) {
       stopAutoRetry();
+      persistDiagnostics();
       bootstrap();
       return;
     }
@@ -259,6 +260,7 @@ function renderConfigBanner(missing: string[]) {
         status.textContent = `Still missing: ${stillMissing.join(", ")}. Click Retry to try again.`;
       }
     }
+    persistDiagnostics();
     refreshDiagnostics();
   };
 
