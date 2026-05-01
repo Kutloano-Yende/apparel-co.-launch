@@ -10,6 +10,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import OrderManagement from "@/components/admin/OrderManagement";
 import MessagesManagement from "@/components/admin/MessagesManagement";
 import RevenueSummary from "@/components/admin/RevenueSummary";
+import NotificationBell from "@/components/admin/NotificationBell";
+import NotificationsManagement from "@/components/admin/NotificationsManagement";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
