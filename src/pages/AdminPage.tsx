@@ -258,12 +258,18 @@ const AdminPage = () => {
           >
             Messages
           </button>
+          <NotificationsTabButton
+            active={activeTab === "notifications"}
+            onClick={() => setActiveTab("notifications")}
+          />
         </div>
 
         {activeTab === "orders" ? (
           <OrderManagement />
         ) : activeTab === "messages" ? (
           <MessagesManagement />
+        ) : activeTab === "notifications" ? (
+          <NotificationsManagement />
         ) : (
         <>
         <div className="flex items-center justify-between mb-10">
