@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/products";
 import { useQueryClient } from "@tanstack/react-query";
 import OrderManagement from "@/components/admin/OrderManagement";
 import MessagesManagement from "@/components/admin/MessagesManagement";
+import RevenueSummary from "@/components/admin/RevenueSummary";
 
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -222,6 +223,8 @@ const AdminPage = () => {
           <h1 className="section-heading mb-2">Admin Dashboard</h1>
           <p className="text-muted-foreground text-sm">Manage your store</p>
         </div>
+
+        <RevenueSummary />
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-border mb-8">
