@@ -1,0 +1,121 @@
+import { useState, useEffect, useRef } from "react";
+import { Bell, Check, Trash2 } from "lucide-react";
+import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifications";
+
+const formatTime = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return new Date(iso).toLocaleDateString();
+};
+
+const NotificationBell = ({ enabled }: { enabled: boolean }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } =
+    useAdminNotifications(enabled);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!enabled) return null;
+
+  const recent = notifications.slice(0, 8);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="relative p-2 hover:bg-secondary transition-colors border border-border"
+        aria-label="Notifications"
+      >
+        <Bell size={18} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-foreground text-background text-[10px] font-display tracking-wider rounded-full flex items-center justify-center">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-[360px] max-w-[90vw] bg-background border border-border shadow-lg z-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h3 className="font-display text-xs tracking-widest uppercase">
+              Notifications
+            </h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="text-[10px] font-display tracking-widest uppercase text-muted-foreground hover:text-foreground"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-[420px] overflow-y-auto">
+            {recent.length === 0 ? (
+              <p className="px-4 py-8 text-sm text-center text-muted-foreground">
+                No notifications yet.
+              </p>
+            ) : (
+              recent.map((n: AdminNotification) => (
+                <div
+                  key={n.id}
+                  className={`group px-4 py-3 border-b border-border last:border-0 ${
+                    !n.read ? "bg-secondary/40" : ""
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {!n.read && (
+                      <span className="mt-1.5 w-2 h-2 bg-foreground rounded-full flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display text-sm tracking-wide truncate">
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {n.message}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1 font-display tracking-wider uppercase">
+                        {formatTime(n.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!n.read && (
+                        <button
+                          onClick={() => markAsRead(n.id)}
+                          className="p-1 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                          title="Mark as read"
+                        >
+                          <Check size={12} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteNotification(n.id)}
+                        className="p-1 hover:bg-secondary text-muted-foreground hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NotificationBell;
