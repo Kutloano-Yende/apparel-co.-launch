@@ -10,6 +10,28 @@ import { useQueryClient } from "@tanstack/react-query";
 import OrderManagement from "@/components/admin/OrderManagement";
 import MessagesManagement from "@/components/admin/MessagesManagement";
 import RevenueSummary from "@/components/admin/RevenueSummary";
+import NotificationBell from "@/components/admin/NotificationBell";
+import NotificationsManagement from "@/components/admin/NotificationsManagement";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+
+const NotificationsTabButton = ({ active, onClick }: { active: boolean; onClick: () => void }) => {
+  const { unreadCount } = useAdminNotifications(true);
+  return (
+    <button
+      onClick={onClick}
+      className={`font-display text-sm tracking-widest uppercase px-6 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+        active ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      Notifications
+      {unreadCount > 0 && (
+        <span className="min-w-[18px] h-[18px] px-1 bg-foreground text-background text-[10px] rounded-full flex items-center justify-center">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+  );
+};
 
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -34,7 +56,7 @@ const AdminPage = () => {
   const queryClient = useQueryClient();
   const { data: products, isLoading: productsLoading } = useProducts();
 
-  const [activeTab, setActiveTab] = useState<"products" | "orders" | "messages">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "messages" | "notifications">("products");
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -219,9 +241,12 @@ const AdminPage = () => {
   return (
     <main className="pt-24 md:pt-28 pb-16 md:pb-24">
       <div className="container-brand max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="section-heading mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Manage your store</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="section-heading mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground text-sm">Manage your store</p>
+          </div>
+          <NotificationBell enabled={isAdmin} />
         </div>
 
         <RevenueSummary />
@@ -252,12 +277,18 @@ const AdminPage = () => {
           >
             Messages
           </button>
+          <NotificationsTabButton
+            active={activeTab === "notifications"}
+            onClick={() => setActiveTab("notifications")}
+          />
         </div>
 
         {activeTab === "orders" ? (
           <OrderManagement />
         ) : activeTab === "messages" ? (
           <MessagesManagement />
+        ) : activeTab === "notifications" ? (
+          <NotificationsManagement />
         ) : (
         <>
         <div className="flex items-center justify-between mb-10">
