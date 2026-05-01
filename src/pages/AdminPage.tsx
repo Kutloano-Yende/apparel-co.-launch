@@ -37,7 +37,7 @@ const AdminPage = () => {
   const queryClient = useQueryClient();
   const { data: products, isLoading: productsLoading } = useProducts();
 
-  const [activeTab, setActiveTab] = useState<"products" | "orders" | "messages">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "messages" | "notifications">("products");
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -222,9 +222,12 @@ const AdminPage = () => {
   return (
     <main className="pt-24 md:pt-28 pb-16 md:pb-24">
       <div className="container-brand max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="section-heading mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Manage your store</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="section-heading mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground text-sm">Manage your store</p>
+          </div>
+          <NotificationBell enabled={isAdmin} />
         </div>
 
         <RevenueSummary />
