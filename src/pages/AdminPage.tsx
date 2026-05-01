@@ -14,6 +14,25 @@ import NotificationBell from "@/components/admin/NotificationBell";
 import NotificationsManagement from "@/components/admin/NotificationsManagement";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
+const NotificationsTabButton = ({ active, onClick }: { active: boolean; onClick: () => void }) => {
+  const { unreadCount } = useAdminNotifications(true);
+  return (
+    <button
+      onClick={onClick}
+      className={`font-display text-sm tracking-widest uppercase px-6 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+        active ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      Notifications
+      {unreadCount > 0 && (
+        <span className="min-w-[18px] h-[18px] px-1 bg-foreground text-background text-[10px] rounded-full flex items-center justify-center">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+  );
+};
+
 const categories = ["t-shirts", "shorts", "hoodies", "accessories"];
 const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
