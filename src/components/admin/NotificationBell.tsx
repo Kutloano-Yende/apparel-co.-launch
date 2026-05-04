@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Trash2 } from "lucide-react";
+import { Bell, Check, Trash2, Volume2, VolumeX } from "lucide-react";
 import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifications";
 
 const formatTime = (iso: string) => {
@@ -15,8 +15,16 @@ const formatTime = (iso: string) => {
 const NotificationBell = ({ enabled }: { enabled: boolean }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } =
-    useAdminNotifications(enabled);
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    soundEnabled,
+    setSoundEnabled,
+    testSound,
+  } = useAdminNotifications(enabled);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -51,14 +59,28 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
             <h3 className="font-display text-xs tracking-widest uppercase">
               Notifications
             </h3>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={markAllAsRead}
-                className="text-[10px] font-display tracking-widest uppercase text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  if (next) testSound();
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title={soundEnabled ? "Sound on — click to mute" : "Sound off — click to enable"}
+                aria-label={soundEnabled ? "Mute notification sound" : "Enable notification sound"}
               >
-                Mark all read
+                {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
               </button>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-[10px] font-display tracking-widest uppercase text-muted-foreground hover:text-foreground"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-[420px] overflow-y-auto">

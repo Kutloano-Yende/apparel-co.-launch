@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 
 export interface AdminNotification {
   id: string;
@@ -18,6 +19,7 @@ const NOTIF_QUERY_KEY = ["admin-notifications"];
 
 export const useAdminNotifications = (enabled: boolean) => {
   const queryClient = useQueryClient();
+  const sound = useNotificationSound();
 
   const query = useQuery({
     queryKey: NOTIF_QUERY_KEY,
@@ -49,6 +51,7 @@ export const useAdminNotifications = (enabled: boolean) => {
             ...(prev || []),
           ]);
           toast.success(row.title, { description: row.message });
+          sound.play();
         },
       )
       .on(
@@ -92,5 +95,8 @@ export const useAdminNotifications = (enabled: boolean) => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    soundEnabled: sound.enabled,
+    setSoundEnabled: sound.setEnabled,
+    testSound: sound.testSound,
   };
 };
