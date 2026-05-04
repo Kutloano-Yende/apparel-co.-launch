@@ -51,7 +51,7 @@ export const useAdminNotifications = (enabled: boolean) => {
             ...(prev || []),
           ]);
           toast.success(row.title, { description: row.message });
-          sound.play();
+          if (row.type === "new_order") sound.play();
         },
       )
       .on(
