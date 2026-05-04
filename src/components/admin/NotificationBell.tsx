@@ -23,6 +23,8 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
     deleteNotification,
     soundEnabled,
     setSoundEnabled,
+    soundVolume,
+    setSoundVolume,
     testSound,
   } = useAdminNotifications(enabled);
 
