@@ -15,8 +15,16 @@ const formatTime = (iso: string) => {
 const NotificationBell = ({ enabled }: { enabled: boolean }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } =
-    useAdminNotifications(enabled);
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    soundEnabled,
+    setSoundEnabled,
+    testSound,
+  } = useAdminNotifications(enabled);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
