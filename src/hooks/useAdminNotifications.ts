@@ -51,6 +51,7 @@ export const useAdminNotifications = (enabled: boolean) => {
             ...(prev || []),
           ]);
           toast.success(row.title, { description: row.message });
+          sound.play();
         },
       )
       .on(
