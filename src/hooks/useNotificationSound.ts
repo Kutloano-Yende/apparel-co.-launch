@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "admin-notif-sound-enabled";
+const VOLUME_KEY = "admin-notif-sound-volume";
+const DEFAULT_VOLUME = 0.25;
 
 // Generate a short, pleasant two-tone chime via WebAudio (no asset needed)
-const playChime = async () => {
+const playChime = async (volume: number) => {
   try {
     const AudioCtx =
       (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
@@ -13,6 +15,7 @@ const playChime = async () => {
       await ctx.resume();
     }
 
+    const peak = Math.max(0.0001, Math.min(1, volume));
     const now = ctx.currentTime;
     const tones: Array<[number, number]> = [
       [880, now], // A5
@@ -25,14 +28,13 @@ const playChime = async () => {
       osc.type = "sine";
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(peak, start + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
       osc.connect(gain).connect(ctx.destination);
       osc.start(start);
       osc.stop(start + 0.34);
     });
 
-    // Auto-close context shortly after
     setTimeout(() => ctx.close().catch(() => {}), 800);
   } catch {
     // Silently ignore — autoplay restrictions or unsupported browser
@@ -46,20 +48,35 @@ export const useNotificationSound = () => {
     return v === null ? true : v === "true";
   });
 
+  const [volume, setVolume] = useState<number>(() => {
+    if (typeof window === "undefined") return DEFAULT_VOLUME;
+    const v = localStorage.getItem(VOLUME_KEY);
+    if (v === null) return DEFAULT_VOLUME;
+    const parsed = parseFloat(v);
+    if (Number.isNaN(parsed)) return DEFAULT_VOLUME;
+    return Math.max(0, Math.min(1, parsed));
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, String(enabled));
     } catch {}
   }, [enabled]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(VOLUME_KEY, String(volume));
+    } catch {}
+  }, [volume]);
+
   const play = useCallback(() => {
     if (!enabled) return;
-    void playChime();
-  }, [enabled]);
+    void playChime(volume);
+  }, [enabled, volume]);
 
   const testSound = useCallback(() => {
-    void playChime();
-  }, []);
+    void playChime(volume);
+  }, [volume]);
 
-  return { enabled, setEnabled, play, testSound };
+  return { enabled, setEnabled, volume, setVolume, play, testSound };
 };

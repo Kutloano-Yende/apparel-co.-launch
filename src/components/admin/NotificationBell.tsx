@@ -23,6 +23,8 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
     deleteNotification,
     soundEnabled,
     setSoundEnabled,
+    soundVolume,
+    setSoundVolume,
     testSound,
   } = useAdminNotifications(enabled);
 
@@ -82,6 +84,29 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
               )}
             </div>
           </div>
+
+          {soundEnabled && (
+            <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
+              <span className="text-[10px] font-display tracking-widest uppercase text-muted-foreground">
+                Volume
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={soundVolume}
+                onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                onMouseUp={() => testSound()}
+                onTouchEnd={() => testSound()}
+                className="flex-1 h-1 accent-foreground cursor-pointer"
+                aria-label="Notification volume"
+              />
+              <span className="text-[10px] font-display tracking-wider text-muted-foreground w-8 text-right">
+                {Math.round(soundVolume * 100)}
+              </span>
+            </div>
+          )}
 
           <div className="max-h-[420px] overflow-y-auto">
             {recent.length === 0 ? (
