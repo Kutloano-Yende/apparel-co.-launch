@@ -19,6 +19,7 @@ const NOTIF_QUERY_KEY = ["admin-notifications"];
 
 export const useAdminNotifications = (enabled: boolean) => {
   const queryClient = useQueryClient();
+  const sound = useNotificationSound();
 
   const query = useQuery({
     queryKey: NOTIF_QUERY_KEY,
