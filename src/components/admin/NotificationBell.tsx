@@ -105,6 +105,15 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
               <span className="text-[10px] font-display tracking-wider text-muted-foreground w-8 text-right">
                 {Math.round(soundVolume * 100)}
               </span>
+              <button
+                onClick={() => testSound()}
+                className="flex items-center gap-1 px-2 py-1 border border-border text-[10px] font-display tracking-widest uppercase text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                title="Test chime"
+                aria-label="Test chime"
+              >
+                <Play size={10} />
+                Test
+              </button>
             </div>
           )}
 
