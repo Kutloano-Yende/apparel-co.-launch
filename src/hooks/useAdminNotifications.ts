@@ -97,6 +97,8 @@ export const useAdminNotifications = (enabled: boolean) => {
     deleteNotification,
     soundEnabled: sound.enabled,
     setSoundEnabled: sound.setEnabled,
+    soundVolume: sound.volume,
+    setSoundVolume: sound.setVolume,
     testSound: sound.testSound,
   };
 };
