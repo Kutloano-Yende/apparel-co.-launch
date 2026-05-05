@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifications";
 
 const playTestChime = (testSound: () => void, volume: number) => {
-  testSound();
+  playTestChime(testSound, soundVolume);
   toast.success("Chime played", {
     description: `Volume ${Math.round(volume * 100)}%`,
     duration: 1500,
@@ -75,7 +75,7 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
                 onClick={() => {
                   const next = !soundEnabled;
                   setSoundEnabled(next);
-                  if (next) testSound();
+                  if (next) playTestChime(testSound, soundVolume);
                 }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 title={soundEnabled ? "Sound on — click to mute" : "Sound off — click to enable"}
@@ -106,8 +106,8 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
                 step={0.05}
                 value={soundVolume}
                 onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
-                onMouseUp={() => testSound()}
-                onTouchEnd={() => testSound()}
+                onMouseUp={() => playTestChime(testSound, soundVolume)}
+                onTouchEnd={() => playTestChime(testSound, soundVolume)}
                 className="flex-1 h-1 accent-foreground cursor-pointer"
                 aria-label="Notification volume"
               />
@@ -115,7 +115,7 @@ const NotificationBell = ({ enabled }: { enabled: boolean }) => {
                 {Math.round(soundVolume * 100)}
               </span>
               <button
-                onClick={() => testSound()}
+                onClick={() => playTestChime(testSound, soundVolume)}
                 className="flex items-center gap-1 px-2 py-1 border border-border text-[10px] font-display tracking-widest uppercase text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                 title="Test chime"
                 aria-label="Test chime"
