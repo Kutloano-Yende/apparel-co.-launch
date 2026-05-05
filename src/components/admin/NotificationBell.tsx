@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Trash2, Volume2, VolumeX, Play } from "lucide-react";
+import { toast } from "sonner";
 import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifications";
+
+const playTestChime = (testSound: () => void, volume: number) => {
+  testSound();
+  toast.success("Chime played", {
+    description: `Volume ${Math.round(volume * 100)}%`,
+    duration: 1500,
+  });
+};
 
 const formatTime = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
