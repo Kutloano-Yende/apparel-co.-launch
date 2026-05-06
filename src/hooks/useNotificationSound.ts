@@ -5,14 +5,20 @@ const VOLUME_KEY = "admin-notif-sound-volume";
 const DEFAULT_VOLUME = 0.25;
 
 // Generate a short, pleasant two-tone chime via WebAudio (no asset needed)
-const playChime = async (volume: number) => {
+// Returns true on success, or an error code string on failure.
+const playChime = async (volume: number): Promise<true | "unsupported" | "blocked" | "error"> => {
   try {
     const AudioCtx =
       (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-    if (!AudioCtx) return;
+    if (!AudioCtx) return "unsupported";
     const ctx = new AudioCtx();
     if (ctx.state === "suspended") {
-      await ctx.resume();
+      try {
+        await ctx.resume();
+      } catch {
+        return "blocked";
+      }
+      if (ctx.state === "suspended") return "blocked";
     }
 
     const peak = Math.max(0.0001, Math.min(1, volume));
@@ -36,8 +42,9 @@ const playChime = async (volume: number) => {
     });
 
     setTimeout(() => ctx.close().catch(() => {}), 800);
+    return true;
   } catch {
-    // Silently ignore — autoplay restrictions or unsupported browser
+    return "error";
   }
 };
 
@@ -74,8 +81,8 @@ export const useNotificationSound = () => {
     void playChime(volume);
   }, [enabled, volume]);
 
-  const testSound = useCallback(() => {
-    void playChime(volume);
+  const testSound = useCallback(async () => {
+    return await playChime(volume);
   }, [volume]);
 
   return { enabled, setEnabled, volume, setVolume, play, testSound };
