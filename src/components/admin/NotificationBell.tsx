@@ -3,12 +3,31 @@ import { Bell, Check, Trash2, Volume2, VolumeX, Play } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifications";
 
+const AUDIO_PERMISSION_KEY = "admin-notif-audio-permission-prompted";
+
 const playTestChime = (testSound: () => void, volume: number) => {
+  const alreadyPrompted =
+    typeof window !== "undefined" && localStorage.getItem(AUDIO_PERMISSION_KEY) === "true";
+
+  if (!alreadyPrompted) {
+    toast("Allow audio playback?", {
+      description:
+        "Your browser may block sound until you interact with the page. Click Test again if you didn't hear anything.",
+      duration: 4000,
+    });
+    try {
+      localStorage.setItem(AUDIO_PERMISSION_KEY, "true");
+    } catch {}
+  }
+
   testSound();
-  toast.success("Chime played", {
-    description: `Volume ${Math.round(volume * 100)}%`,
-    duration: 1500,
-  });
+
+  if (alreadyPrompted) {
+    toast.success("Chime played", {
+      description: `Volume ${Math.round(volume * 100)}%`,
+      duration: 1500,
+    });
+  }
 };
 
 const formatTime = (iso: string) => {
