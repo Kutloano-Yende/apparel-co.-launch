@@ -5,7 +5,10 @@ import { useAdminNotifications, AdminNotification } from "@/hooks/useAdminNotifi
 
 const AUDIO_PERMISSION_KEY = "admin-notif-audio-permission-prompted";
 
-const playTestChime = (testSound: () => void, volume: number) => {
+const playTestChime = async (
+  testSound: () => Promise<true | "unsupported" | "blocked" | "error">,
+  volume: number,
+) => {
   const alreadyPrompted =
     typeof window !== "undefined" && localStorage.getItem(AUDIO_PERMISSION_KEY) === "true";
 
@@ -20,12 +23,35 @@ const playTestChime = (testSound: () => void, volume: number) => {
     } catch {}
   }
 
-  testSound();
+  const result = await testSound();
 
-  if (alreadyPrompted) {
-    toast.success("Chime played", {
-      description: `Volume ${Math.round(volume * 100)}%`,
-      duration: 1500,
+  if (result === true) {
+    if (alreadyPrompted) {
+      toast.success("Chime played", {
+        description: `Volume ${Math.round(volume * 100)}%`,
+        duration: 1500,
+      });
+    }
+    return;
+  }
+
+  if (result === "unsupported") {
+    toast.error("Audio not supported", {
+      description:
+        "Your browser doesn't support the Web Audio API. Try a recent version of Chrome, Firefox, Safari, or Edge.",
+      duration: 5000,
+    });
+  } else if (result === "blocked") {
+    toast.error("Audio blocked by browser", {
+      description:
+        "Click anywhere on the page first, then try again. Also check that this site isn't muted in your browser tab settings.",
+      duration: 5000,
+    });
+  } else {
+    toast.error("Couldn't play chime", {
+      description:
+        "Something went wrong. Check your system volume, unmute the browser tab, and try again.",
+      duration: 5000,
     });
   }
 };
