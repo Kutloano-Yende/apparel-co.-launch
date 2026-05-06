@@ -42,8 +42,9 @@ const playChime = async (volume: number): Promise<true | "unsupported" | "blocke
     });
 
     setTimeout(() => ctx.close().catch(() => {}), 800);
+    return true;
   } catch {
-    // Silently ignore — autoplay restrictions or unsupported browser
+    return "error";
   }
 };
 
