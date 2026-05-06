@@ -81,8 +81,8 @@ export const useNotificationSound = () => {
     void playChime(volume);
   }, [enabled, volume]);
 
-  const testSound = useCallback(() => {
-    void playChime(volume);
+  const testSound = useCallback(async () => {
+    return await playChime(volume);
   }, [volume]);
 
   return { enabled, setEnabled, volume, setVolume, play, testSound };
