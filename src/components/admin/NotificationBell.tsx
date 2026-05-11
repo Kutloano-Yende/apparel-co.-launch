@@ -35,23 +35,33 @@ const playTestChime = async (
     return;
   }
 
+  const retryAction = {
+    label: "Try again",
+    onClick: () => {
+      void playTestChime(testSound, volume);
+    },
+  };
+
   if (result === "unsupported") {
     toast.error("Audio not supported", {
       description:
         "Your browser doesn't support the Web Audio API. Try a recent version of Chrome, Firefox, Safari, or Edge.",
       duration: 5000,
+      action: retryAction,
     });
   } else if (result === "blocked") {
     toast.error("Audio blocked by browser", {
       description:
         "Click anywhere on the page first, then try again. Also check that this site isn't muted in your browser tab settings.",
       duration: 5000,
+      action: retryAction,
     });
   } else {
     toast.error("Couldn't play chime", {
       description:
         "Something went wrong. Check your system volume, unmute the browser tab, and try again.",
       duration: 5000,
+      action: retryAction,
     });
   }
 };
