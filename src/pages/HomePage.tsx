@@ -141,9 +141,9 @@ const HomePage = () => {
           </FadeInView>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { to: "/shop?category=t-shirts", label: "T-Shirts" },
-              { to: "/shop?category=shorts", label: "Shorts" },
-              { to: "/shop?category=hoodies", label: "Hoodies" },
+              { to: "/collections/t-shirts", label: "T-Shirts" },
+              { to: "/collections/hoodies", label: "Hoodies" },
+              { to: "/collections/accessories", label: "Accessories" },
             ].map((category, index) => (
               <FadeInView key={category.label} delay={index * 0.15}>
                 <Link

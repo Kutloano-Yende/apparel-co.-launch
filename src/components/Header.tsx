@@ -26,8 +26,9 @@ const Header = () => {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
-    { href: "/shop?category=t-shirts", label: "T-Shirts" },
-    { href: "/shop?category=shorts", label: "Shorts" },
+    { href: "/collections/t-shirts", label: "T-Shirts" },
+    { href: "/collections/hoodies", label: "Hoodies" },
+    { href: "/collections/accessories", label: "Accessories" },
   ];
 
   const isActive = (href: string) => {
