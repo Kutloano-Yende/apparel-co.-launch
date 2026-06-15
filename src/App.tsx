@@ -18,6 +18,7 @@ import AccountPage from "@/pages/AccountPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import AdminPage from "@/pages/AdminPage";
+import SettingsPage from "@/pages/SettingsPage";
 import TrackOrderPage from "@/pages/TrackOrderPage";
 import ContactPage from "@/pages/ContactPage";
 import ShippingPage from "@/pages/ShippingPage";
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
