@@ -1,9 +1,38 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// --- CORS: restrict to known origins instead of "*" ---
+const ALLOWED_ORIGINS = [
+  "https://apparel-co-launch.vercel.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+];
+const corsHeaders = (origin: string | null) => ({
+  "Access-Control-Allow-Origin":
+    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
+});
+
+// Used to gate the admin-reply mode (sending email from the brand to a customer).
+async function isAdmin(req: Request): Promise<boolean> {
+  const token = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
+  if (!token) return false;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return false;
+  const { data: role } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+  return !!role;
+}
 
 const buildHtml = (name: string, subject: string, message: string) => `
 <!DOCTYPE html>
@@ -58,14 +87,24 @@ const buildAdminReplyHtml = (name: string, subject: string, replyMessage: string
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = corsHeaders(req.headers.get("origin"));
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
-
     const body = await req.json();
     const mode: string = body.mode || "acknowledgement";
+
+    // Authorize the admin-reply mode BEFORE doing anything else, so unauthorized
+    // callers always get 403 regardless of email configuration.
+    if (mode === "admin-reply" && !(await isAdmin(req))) {
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
 
     const sendEmail = (payload: Record<string, unknown>) =>
       fetch("https://api.resend.com/emails", {
@@ -77,19 +116,19 @@ serve(async (req) => {
         body: JSON.stringify(payload),
       });
 
-    // ---------- ADMIN REPLY MODE ----------
+    // ---------- ADMIN REPLY MODE (admin only — sends mail from the brand) ----------
     if (mode === "admin-reply") {
       const { name, email, subject, replyMessage, originalMessage } = body;
       if (!name || !email || !replyMessage) {
         return new Response(JSON.stringify({ error: "Missing required fields (name, email, replyMessage)" }), {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
       if (typeof replyMessage !== "string" || replyMessage.length < 1 || replyMessage.length > 5000) {
         return new Response(JSON.stringify({ error: "replyMessage must be 1-5000 characters" }), {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
@@ -114,21 +153,28 @@ serve(async (req) => {
         console.error("Admin reply email failed:", data);
         return new Response(JSON.stringify({ success: false, error: data }), {
           status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
       return new Response(JSON.stringify({ success: true, data }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
-    // ---------- ACKNOWLEDGEMENT MODE (existing behaviour) ----------
+    // ---------- ACKNOWLEDGEMENT MODE (public — visitor submits the contact form) ----------
     const { name, email, subject, message } = body;
     if (!name || !email || !message) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    // Basic input bounds to limit abuse of the public endpoint.
+    if (String(name).length > 100 || String(email).length > 255 || String(message).length > 5000 || String(subject || "").length > 200) {
+      return new Response(JSON.stringify({ error: "Field length limits exceeded" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -190,14 +236,14 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true, customer: customerData, admin: adminData }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
     console.error("send-contact-reply error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ success: false, error: msg }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

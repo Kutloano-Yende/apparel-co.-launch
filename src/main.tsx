@@ -1,6 +1,9 @@
 import { createRoot, type Root } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
+
+// NOTE: App is imported lazily inside bootstrap() — NOT at the top level — so the
+// env-var guard can render its config banner without first pulling in the Supabase
+// client, which throws at module-load time when the keys are missing/invalid.
 
 const rootEl = document.getElementById("root")!;
 let reactRoot: Root | null = null;
@@ -394,7 +397,7 @@ function renderConfigBanner(missing: string[]) {
   }, AUTO_RETRY_INTERVAL_MS);
 }
 
-function bootstrap() {
+async function bootstrap() {
   const missing = getMissingEnvVars();
   if (missing.length > 0) {
     console.error("[startup-guard] Missing required env vars:", missing);
@@ -405,6 +408,9 @@ function bootstrap() {
   stopAutoRetry();
   clearPersistedDiagnostics();
   rootEl.innerHTML = "";
+  // Imported here (not at top level) so the Supabase client only loads once the
+  // env guard has passed — otherwise a missing key crashes before the banner shows.
+  const { default: App } = await import("./App.tsx");
   reactRoot = createRoot(rootEl);
   reactRoot.render(<App />);
 }

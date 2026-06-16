@@ -2,15 +2,23 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://apparel-co-launch.vercel.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+];
+const makeCors = (origin: string | null) => ({
+  "Access-Control-Allow-Origin":
+    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+  "Vary": "Origin",
+});
 
 serve(async (req) => {
+  const cors = makeCors(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -34,7 +42,7 @@ serve(async (req) => {
     if (session.payment_status !== "paid") {
       return new Response(
         JSON.stringify({ error: "Payment not completed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...cors, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
@@ -48,7 +56,7 @@ serve(async (req) => {
     if (existingOrder) {
       return new Response(
         JSON.stringify({ order: existingOrder }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        { headers: { ...cors, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -221,13 +229,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ order: { ...order, order_items: savedItems } }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      { headers: { ...cors, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
     console.error("Verify session error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
