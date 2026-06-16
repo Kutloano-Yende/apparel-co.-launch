@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, LogOut, Package, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -358,6 +358,17 @@ const DashboardView = () => {
 // ─── Page ────────────────────────────────────────────────────
 const AccountPage = () => {
   const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+
+  // After signing in/registering, return the user to where they came from
+  // (e.g. the checkout page they were gated out of).
+  useEffect(() => {
+    if (!isLoading && user && from) {
+      navigate(from, { replace: true });
+    }
+  }, [isLoading, user, from, navigate]);
 
   if (isLoading) {
     return (

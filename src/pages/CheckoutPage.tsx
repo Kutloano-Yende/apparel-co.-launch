@@ -9,10 +9,22 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
-  const { user, profile } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Require an account before checkout. Send guests to sign in / register,
+  // remembering to bring them back to checkout afterwards.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast({
+        title: "Sign in to check out",
+        description: "Create an account or sign in to complete your order.",
+      });
+      navigate("/account", { state: { from: "/checkout" }, replace: true });
+    }
+  }, [authLoading, user, navigate, toast]);
 
   const [formData, setFormData] = useState({
     email: "",
