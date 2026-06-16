@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [fetchProfile]);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -92,6 +92,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
     });
     if (error) throw error;
+    // New users are auto-confirmed server-side, so log them straight in for a
+    // seamless experience (signUp returns no session while confirmation is on).
+    if (!data.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+    }
   };
 
   const signIn = async (email: string, password: string) => {

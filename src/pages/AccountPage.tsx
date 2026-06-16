@@ -34,7 +34,7 @@ const AuthView = () => {
         setMode("login");
       } else if (mode === "signup") {
         await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
-        toast({ title: "Account created!", description: "Please check your email to verify your account." });
+        toast({ title: "Account created!", description: "You're all set and signed in." });
         setMode("login");
       } else {
         await signIn(formData.email, formData.password);

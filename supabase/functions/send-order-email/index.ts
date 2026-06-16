@@ -1,9 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+// --- CORS: restrict to known origins instead of "*" ---
+const ALLOWED_ORIGINS = [
+  "https://apparel-co-launch.vercel.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+];
+const corsHeaders = (origin: string | null) => ({
+  "Access-Control-Allow-Origin":
+    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
+});
+
+// Only signed-in admins may trigger customer order emails.
+async function requireAdmin(req: Request): Promise<{ ok: boolean; status?: number; msg?: string }> {
+  const token = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
+  if (!token) return { ok: false, status: 401, msg: "Missing authorization token" };
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return { ok: false, status: 401, msg: "Invalid or expired session" };
+  const { data: role } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (!role) return { ok: false, status: 403, msg: "Admin access required" };
+  return { ok: true };
+}
 
 const statusMessages: Record<string, { subject: string; heading: string; body: string }> = {
   confirmed: {
@@ -33,15 +63,18 @@ const statusMessages: Record<string, { subject: string; heading: string; body: s
   },
 };
 
+const escapeHtml = (s: string) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
 const buildEmailHtml = (heading: string, body: string, orderId: string, items: any[]) => {
   const itemsHtml = items.map((item: any) => `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid #eee;">
-        <strong style="font-family: 'Helvetica Neue', sans-serif; font-size: 14px;">${item.product_name}</strong><br/>
-        <span style="color: #666; font-size: 13px;">Size: ${item.size} · Color: ${item.color} · Qty: ${item.quantity}</span>
+        <strong style="font-family: 'Helvetica Neue', sans-serif; font-size: 14px;">${escapeHtml(item.product_name)}</strong><br/>
+        <span style="color: #666; font-size: 13px;">Size: ${escapeHtml(item.size)} · Color: ${escapeHtml(item.color)} · Qty: ${Number(item.quantity) || 0}</span>
       </td>
       <td style="padding: 12px 0; border-bottom: 1px solid #eee; text-align: right; font-family: 'Helvetica Neue', sans-serif; font-size: 14px;">
-        R ${(item.price * item.quantity).toLocaleString()}
+        R ${((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}
       </td>
     </tr>
   `).join("");
@@ -59,7 +92,7 @@ const buildEmailHtml = (heading: string, body: string, orderId: string, items: a
           <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0;">${body}</p>
         </div>
         <div style="margin-bottom: 24px;">
-          <p style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">Order #${orderId.slice(0, 8).toUpperCase()}</p>
+          <p style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">Order #${escapeHtml(orderId.slice(0, 8).toUpperCase())}</p>
           <table style="width: 100%; border-collapse: collapse;">
             ${itemsHtml}
           </table>
@@ -74,11 +107,21 @@ const buildEmailHtml = (heading: string, body: string, orderId: string, items: a
 };
 
 serve(async (req) => {
+  const cors = corsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
+    // Authorize: only admins can send order status emails.
+    const auth = await requireAdmin(req);
+    if (!auth.ok) {
+      return new Response(JSON.stringify({ success: false, error: auth.msg }), {
+        status: auth.status,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
@@ -92,10 +135,9 @@ serve(async (req) => {
 
     const template = statusMessages[status];
     if (!template) {
-      // Don't send email for statuses without templates (e.g. "pending")
       return new Response(JSON.stringify({ success: true, skipped: true, reason: `No email template for status: ${status}` }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -123,14 +165,14 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true, data: resendData }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
     console.error("Error sending order email:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });
