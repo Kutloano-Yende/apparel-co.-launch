@@ -10,12 +10,19 @@ import { formatPrice } from "@/lib/products";
 type AuthMode = "login" | "signup" | "forgot";
 
 // ─── Auth Forms ──────────────────────────────────────────────
+const safeNext = (value: string | null) =>
+  value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+
 const AuthView = () => {
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const next = safeNext(params.get("next"));
+
 
   const [formData, setFormData] = useState({
     email: "", password: "", firstName: "", lastName: "",
