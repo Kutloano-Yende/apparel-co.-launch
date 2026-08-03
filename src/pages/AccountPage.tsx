@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
 import { Eye, EyeOff, LogOut, Package, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -9,12 +10,19 @@ import { formatPrice } from "@/lib/products";
 type AuthMode = "login" | "signup" | "forgot";
 
 // ─── Auth Forms ──────────────────────────────────────────────
+const safeNext = (value: string | null) =>
+  value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+
 const AuthView = () => {
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const next = safeNext(params.get("next"));
+
 
   const [formData, setFormData] = useState({
     email: "", password: "", firstName: "", lastName: "",
@@ -36,10 +44,13 @@ const AuthView = () => {
         await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
         toast({ title: "Account created!", description: "You're all set and signed in." });
         setMode("login");
+        if (next) navigate(next, { replace: true });
       } else {
         await signIn(formData.email, formData.password);
         toast({ title: "Welcome back!" });
+        if (next) navigate(next, { replace: true });
       }
+
     } catch (error) {
       toast({
         title: mode === "forgot" ? "Reset failed" : mode === "login" ? "Login failed" : "Signup failed",

@@ -26,7 +26,9 @@ import ReturnsPage from "@/pages/ReturnsPage";
 import SizeGuidePage from "@/pages/SizeGuidePage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
+import OAuthConsentPage from "@/pages/OAuthConsentPage";
 import NotFound from "@/pages/NotFound";
+
 
 const queryClient = new QueryClient();
 
@@ -59,6 +61,8 @@ const App = () => (
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
