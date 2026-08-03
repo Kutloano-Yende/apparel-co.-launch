@@ -44,10 +44,13 @@ const AuthView = () => {
         await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
         toast({ title: "Account created!", description: "You're all set and signed in." });
         setMode("login");
+        if (next) navigate(next, { replace: true });
       } else {
         await signIn(formData.email, formData.password);
         toast({ title: "Welcome back!" });
+        if (next) navigate(next, { replace: true });
       }
+
     } catch (error) {
       toast({
         title: mode === "forgot" ? "Reset failed" : mode === "login" ? "Login failed" : "Signup failed",
