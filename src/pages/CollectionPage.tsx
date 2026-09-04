@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/products";
 
 type CollectionSlug = "t-shirts" | "hoodies" | "accessories";
 
-const BASE_URL = "https://apparelco.lovable.app";
+const BASE_URL = "https://apparel-co-launch.vercel.app";
 
 interface CollectionConfig {
   slug: CollectionSlug;
