@@ -5,3 +5,7 @@ verify_jwt = false
 
 [functions.generate-description]
 verify_jwt = false
+
+# PayFast ITN webhook — called server-to-server by PayFast (no JWT).
+[functions.payfast-notify]
+verify_jwt = false

@@ -110,9 +110,20 @@ const CheckoutPage = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
+      if (data?.process_url && data?.fields) {
+        // Redirect to PayFast by POSTing the signed fields via a hidden form.
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = data.process_url;
+        Object.entries(data.fields as Record<string, string>).forEach(([name, value]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
       } else {
         throw new Error("No checkout URL received");
       }

@@ -34,43 +34,51 @@ type OrderData = {
 
 const OrderConfirmationPage = () => {
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get("session_id");
+  const ref = searchParams.get("ref") || searchParams.get("session_id");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { clearCart } = useCart();
 
   useEffect(() => {
-    const processOrder = async () => {
-      try {
-        if (!sessionId) {
-          setIsLoading(false);
-          return;
-        }
+    let cancelled = false;
+    let attempts = 0;
 
-        const { data, error } = await supabase.functions.invoke("verify-session", {
-          body: { session_id: sessionId },
-        });
-
-        if (error || data?.error) {
-          console.error("Session verification error:", error || data?.error);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.order) {
-          setOrder(data.order as OrderData);
-          clearCart();
-          localStorage.removeItem("checkout_shipping");
-        }
-      } catch (err) {
-        console.error("Error processing order:", err);
-      } finally {
+    const fetchOrder = async () => {
+      if (!ref) {
         setIsLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .eq("id", ref)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error || !data) {
+        console.error("Order lookup error:", error);
+        setIsLoading(false);
+        return;
+      }
+
+      setOrder(data as OrderData);
+      clearCart();
+      localStorage.removeItem("checkout_shipping");
+      setIsLoading(false);
+
+      // The PayFast confirmation (ITN) may arrive a moment after the redirect,
+      // so if the order is still pending, poll a few times to catch it flip to paid.
+      if (data.status === "pending" && attempts < 5) {
+        attempts++;
+        setTimeout(fetchOrder, 2500);
       }
     };
 
-    processOrder();
-  }, [sessionId]);
+    fetchOrder();
+    return () => {
+      cancelled = true;
+    };
+  }, [ref]);
 
   if (isLoading) {
     return (
