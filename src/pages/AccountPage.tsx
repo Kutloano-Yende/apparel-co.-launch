@@ -272,7 +272,7 @@ const DashboardView = () => {
             <label className="font-display text-xs tracking-widest uppercase mb-2 block">Address</label>
             <input type="text" name="address" value={profileForm.address} onChange={handleProfileChange} className="input-brand" />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="font-display text-xs tracking-widest uppercase mb-2 block">City</label>
               <input type="text" name="city" value={profileForm.city} onChange={handleProfileChange} className="input-brand" />
